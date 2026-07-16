@@ -222,7 +222,13 @@ export function TicketDetailDialog({
 
         <div>
           <Label htmlFor="title">Título</Label>
-          <Input id="title" name="title" defaultValue={ticket.title} required />
+          <Input
+            id="title"
+            name="title"
+            defaultValue={ticket.title}
+            required
+            maxLength={200}
+          />
         </div>
 
         <div>
@@ -231,6 +237,7 @@ export function TicketDetailDialog({
             id="description"
             name="description"
             rows={3}
+            maxLength={4000}
             defaultValue={ticket.description ?? ""}
           />
         </div>

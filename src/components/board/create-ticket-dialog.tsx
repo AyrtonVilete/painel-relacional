@@ -106,6 +106,7 @@ export function CreateTicketDialog({
             id="title"
             name="title"
             required
+            maxLength={200}
             placeholder="Descreva o chamado"
             autoFocus
           />
@@ -117,6 +118,7 @@ export function CreateTicketDialog({
             id="description"
             name="description"
             rows={3}
+            maxLength={4000}
             placeholder="Detalhes adicionais (opcional)"
           />
         </div>

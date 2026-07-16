@@ -6,7 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentMembership } from "@/lib/org/get-current-membership";
 import type { ActionState } from "@/lib/actions/types";
 
-const nameSchema = z.object({ name: z.string().min(1, "Informe um nome") });
+const nameSchema = z.object({
+  name: z.string().min(1, "Informe um nome").max(200),
+});
 
 export async function createTicketType(
   _prevState: ActionState,

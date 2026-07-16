@@ -11,7 +11,7 @@ import type { Database } from "@/types/database.types";
 type MembershipRole = Database["public"]["Enums"]["membership_role"];
 
 const inviteSchema = z.object({
-  email: z.string().email("E-mail inválido"),
+  email: z.string().email("E-mail inválido").max(255),
   role: z.enum(["admin", "approver", "member"]),
 });
 
@@ -56,8 +56,36 @@ export async function inviteMember(
   revalidatePath("/settings/members");
 }
 
+// The `memberships_prevent_last_admin_removal` DB trigger is the real
+// authority here (covers any access path, not just this app). These
+// pre-checks just avoid hitting that trigger's exception in the common
+// case, for a cleaner no-op instead of a thrown error.
+async function isLastAdmin(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  membershipId: string
+) {
+  const { data: target } = await supabase
+    .from("memberships")
+    .select("role, organization_id")
+    .eq("id", membershipId)
+    .maybeSingle();
+
+  if (target?.role !== "admin") return false;
+
+  const { count } = await supabase
+    .from("memberships")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", target.organization_id)
+    .eq("role", "admin");
+
+  return (count ?? 0) <= 1;
+}
+
 export async function removeMember(membershipId: string) {
   const supabase = await createClient();
+
+  if (await isLastAdmin(supabase, membershipId)) return;
+
   await supabase.from("memberships").delete().eq("id", membershipId);
   revalidatePath("/settings/members");
 }
@@ -67,6 +95,11 @@ export async function updateMemberRole(
   role: MembershipRole
 ) {
   const supabase = await createClient();
+
+  if (role !== "admin" && (await isLastAdmin(supabase, membershipId))) {
+    return;
+  }
+
   await supabase
     .from("memberships")
     .update({ role })

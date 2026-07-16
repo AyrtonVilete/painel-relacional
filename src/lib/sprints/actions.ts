@@ -7,7 +7,7 @@ import { getCurrentMembership } from "@/lib/org/get-current-membership";
 import type { ActionState } from "@/lib/actions/types";
 
 const sprintSchema = z.object({
-  name: z.string().min(1, "Informe um nome"),
+  name: z.string().min(1, "Informe um nome").max(200),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
 });

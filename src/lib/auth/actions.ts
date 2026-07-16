@@ -7,8 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 export type ActionState = { error?: string } | undefined;
 
 const loginSchema = z.object({
-  email: z.string().email("E-mail inválido"),
-  password: z.string().min(1, "Informe a senha"),
+  email: z.string().email("E-mail inválido").max(255),
+  password: z.string().min(1, "Informe a senha").max(200),
 });
 
 export async function login(
@@ -35,10 +35,10 @@ export async function login(
 }
 
 const signupSchema = z.object({
-  fullName: z.string().min(1, "Informe seu nome"),
-  orgName: z.string().min(2, "Informe o nome da organização"),
-  email: z.string().email("E-mail inválido"),
-  password: z.string().min(8, "A senha deve ter pelo menos 8 caracteres"),
+  fullName: z.string().min(1, "Informe seu nome").max(200),
+  orgName: z.string().min(2, "Informe o nome da organização").max(200),
+  email: z.string().email("E-mail inválido").max(255),
+  password: z.string().min(8, "A senha deve ter pelo menos 8 caracteres").max(200),
 });
 
 function slugify(input: string) {
@@ -90,9 +90,11 @@ export async function signup(
   }
 
   if (data.session) {
-    // Email confirmation is disabled on this project — session is already
-    // active, so bootstrap the organization right away instead of waiting
-    // for /auth/callback (which only fires on the confirmation-link flow).
+    // Only reached if email confirmation is ever disabled on this project
+    // (it's enabled today, so signUp normally returns no session here and
+    // /auth/callback does the bootstrap instead once the user confirms).
+    // Kept as a fallback so this path still works correctly if that
+    // project setting changes.
     const { error: rpcError } = await supabase.rpc(
       "create_organization_with_admin",
       { org_name: orgName, org_slug: orgSlug }

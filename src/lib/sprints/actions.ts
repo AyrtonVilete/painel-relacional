@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentMembership } from "@/lib/org/get-current-membership";
 import type { ActionState } from "@/lib/actions/types";
 
 const sprintSchema = z.object({
@@ -25,6 +26,11 @@ export async function createSprint(
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
   }
 
+  const membership = await getCurrentMembership();
+  if (!membership) {
+    return { error: "Organização não encontrada" };
+  }
+
   const supabase = await createClient();
 
   // MVP: one board per organization (the one created at signup), so we
@@ -32,6 +38,7 @@ export async function createSprint(
   const { data: board } = await supabase
     .from("boards")
     .select("id")
+    .eq("organization_id", membership.organization_id)
     .limit(1)
     .maybeSingle();
 

@@ -5,6 +5,8 @@ import { SprintForm } from "@/components/settings/sprint-form";
 import { DeleteButton } from "@/components/settings/delete-button";
 import { EmptyState } from "@/components/ui/empty-state";
 
+export const dynamic = "force-dynamic";
+
 function formatDate(value: string) {
   const [year, month, day] = value.split("-");
   return `${day}/${month}/${year}`;

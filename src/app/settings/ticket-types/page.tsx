@@ -5,6 +5,8 @@ import { SimpleNameForm } from "@/components/settings/simple-name-form";
 import { DeleteButton } from "@/components/settings/delete-button";
 import { EmptyState } from "@/components/ui/empty-state";
 
+export const dynamic = "force-dynamic";
+
 export default async function TicketTypesPage() {
   const supabase = await createClient();
 

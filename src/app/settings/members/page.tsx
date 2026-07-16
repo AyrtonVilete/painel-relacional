@@ -6,6 +6,8 @@ import { MemberRoleSelect } from "@/components/settings/member-role-select";
 import { DeleteButton } from "@/components/settings/delete-button";
 import { EmptyState } from "@/components/ui/empty-state";
 
+export const dynamic = "force-dynamic";
+
 export default async function MembersPage() {
   const supabase = await createClient();
 

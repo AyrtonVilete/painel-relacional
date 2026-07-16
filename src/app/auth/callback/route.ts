@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 // Hit after the user clicks the confirmation link in the signup email.
 // Exchanges the code for a session, then bootstraps the organization the
 // user requested at signup (org_name/org_slug were stashed in user_metadata

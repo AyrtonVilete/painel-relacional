@@ -8,6 +8,12 @@ import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { KanbanBoard } from "@/components/board/kanban-board";
 import { getCurrentMembership } from "@/lib/org/get-current-membership";
 
+// This page renders per-user data (membership role, org, tickets) fetched
+// via Supabase REST calls. Next.js's fetch cache can otherwise serve one
+// user's cached response to a different user's request on the same route
+// — force fully dynamic, uncached rendering.
+export const dynamic = "force-dynamic";
+
 export default async function BoardPage() {
   const supabase = await createClient();
 

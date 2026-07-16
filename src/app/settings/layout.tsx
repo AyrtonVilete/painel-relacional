@@ -3,6 +3,10 @@ import Link from "next/link";
 import { Users, UserPlus, Tag, CalendarRange, ArrowLeft } from "lucide-react";
 import { getCurrentMembership } from "@/lib/org/get-current-membership";
 
+// Per-user data (admin gate, org membership) — never let Next.js's fetch
+// cache serve one user's response to another's request on this route.
+export const dynamic = "force-dynamic";
+
 const NAV_ITEMS = [
   { href: "/settings/members", label: "Membros", icon: UserPlus },
   { href: "/settings/clients", label: "Clientes", icon: Users },

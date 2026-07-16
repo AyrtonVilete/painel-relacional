@@ -26,6 +26,16 @@ export async function createClient() {
           }
         },
       },
+      global: {
+        // Belt-and-suspenders alongside `export const dynamic =
+        // "force-dynamic"` on every page that reads per-user data: Next.js
+        // patches global fetch and can otherwise cache a Supabase REST
+        // response keyed without regard to the caller's auth cookie,
+        // serving one user's data to another on the same route. Force
+        // every request through this client to bypass Next's fetch cache
+        // entirely, regardless of route-level config.
+        fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }),
+      },
     }
   );
 }

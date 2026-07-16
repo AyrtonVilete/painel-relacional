@@ -1,22 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
 import { AuthShell } from "@/components/auth/auth-shell";
-import { SetPasswordForm } from "@/components/auth/set-password-form";
+import { InviteAcceptGate } from "@/components/auth/invite-accept-gate";
 
-export default async function SetPasswordPage({
-  searchParams,
-}: {
-  searchParams: { code?: string };
-}) {
-  const supabase = await createClient();
-  let valid = false;
-
-  if (searchParams.code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(
-      searchParams.code
-    );
-    valid = !error;
-  }
-
+export default function SetPasswordPage() {
   return (
     <AuthShell
       headline="Você foi convidado para uma organização no Painel Relacional."
@@ -31,14 +16,7 @@ export default async function SetPasswordPage({
         </p>
       </div>
 
-      {valid ? (
-        <SetPasswordForm />
-      ) : (
-        <p className="text-sm text-red-600 dark:text-red-400">
-          Este link de convite é inválido ou expirou. Peça um novo convite ao
-          administrador da sua organização.
-        </p>
-      )}
+      <InviteAcceptGate />
     </AuthShell>
   );
 }

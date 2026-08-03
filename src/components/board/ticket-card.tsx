@@ -68,14 +68,14 @@ export function TicketCard({
       onClick={onClick}
       aria-label={`Chamado número ${ticket.ticket_number}: ${ticket.title}`}
       className={clsx(
-        "cursor-pointer touch-none rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-900",
+        "cursor-pointer touch-none overflow-hidden rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-900",
         isDragging && "opacity-40"
       )}
     >
       <p className="text-xs font-medium text-slate-400 dark:text-slate-500">
         #{ticket.ticket_number}
       </p>
-      <p className="text-sm font-medium leading-snug text-slate-800 dark:text-slate-100">
+      <p className="break-words text-sm font-medium leading-snug text-slate-800 dark:text-slate-100">
         {ticket.title}
       </p>
 

@@ -26,7 +26,7 @@ export function Column({
   const { setNodeRef, isOver } = useDroppable({ id: status.id });
 
   return (
-    <div className="flex w-72 shrink-0 flex-col rounded-xl bg-slate-100/70 dark:bg-slate-900/60">
+    <div className="flex min-h-0 w-72 shrink-0 flex-col rounded-xl bg-slate-100/70 dark:bg-slate-900/60">
       <div className="flex items-center justify-between px-3 py-3">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
@@ -49,7 +49,7 @@ export function Column({
       <div
         ref={setNodeRef}
         className={clsx(
-          "flex-1 space-y-2 rounded-b-xl px-3 pb-3 transition-colors",
+          "min-h-0 flex-1 space-y-2 overflow-y-auto rounded-b-xl px-3 pb-3 transition-colors",
           isOver && "bg-indigo-50 dark:bg-indigo-950/30"
         )}
         style={{ minHeight: 140 }}

@@ -50,7 +50,10 @@ export default async function SprintsPage() {
                     {sprint.end_date ? formatDate(sprint.end_date) : "—"}
                   </td>
                   <td className="w-12 px-3 py-3 text-right">
-                    <DeleteButton action={deleteSprint.bind(null, sprint.id)} />
+                    <DeleteButton
+                      action={deleteSprint.bind(null, sprint.id)}
+                      confirmMessage={`Excluir a sprint "${sprint.name}"? Essa ação não pode ser desfeita.`}
+                    />
                   </td>
                 </tr>
               ))}

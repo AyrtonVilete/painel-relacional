@@ -1,12 +1,8 @@
-import Link from "next/link";
-import { LogOut, Settings } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { logout } from "@/lib/auth/actions";
-import { LogoMark } from "@/components/brand/logo-mark";
-import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { AppHeader } from "@/components/layout/app-header";
 import { KanbanBoard } from "@/components/board/kanban-board";
 import { getCurrentMembership } from "@/lib/org/get-current-membership";
+import { parseBoardFilters } from "@/lib/board/layout-preferences";
 
 // This page renders per-user data (membership role, org, tickets) fetched
 // via Supabase REST calls. Next.js's fetch cache can otherwise serve one
@@ -39,13 +35,14 @@ export default async function BoardPage() {
   }
 
   const [
-    { data: statuses },
-    { data: tickets },
+    { data: statuses, error: statusesError },
+    { data: tickets, error: ticketsError },
     { data: clients },
     { data: ticketTypes },
     { data: sprints },
-    { data: members },
+    { data: orgMemberships },
     { data: developers },
+    { data: layoutPreferences },
   ] = await Promise.all([
     supabase
       .from("statuses")
@@ -64,60 +61,62 @@ export default async function BoardPage() {
       .eq("organization_id", membership.organization_id)
       .order("name"),
     supabase.from("sprints").select("*").eq("board_id", board.id).order("start_date"),
-    supabase.from("profiles").select("id, full_name"),
+    // Scoped by organization_id first (rather than fetching every profile
+    // RLS happens to let this user see) so the query's own filter — not
+    // just RLS — expresses "this org's members".
+    supabase
+      .from("memberships")
+      .select("user_id")
+      .eq("organization_id", membership.organization_id),
     supabase
       .from("developers")
       .select("id, name")
       .eq("organization_id", membership.organization_id)
       .order("name"),
+    supabase
+      .from("layout_preferences")
+      .select("layout_json")
+      .eq("board_id", board.id)
+      .eq("user_id", user?.id ?? "")
+      .maybeSingle(),
   ]);
+
+  const orgMemberUserIds = (orgMemberships ?? []).map((m) => m.user_id);
+  const { data: members } =
+    orgMemberUserIds.length > 0
+      ? await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", orgMemberUserIds)
+      : { data: [] };
 
   const membersById = new Map(
     (members ?? []).map((m) => [m.id, m.full_name ?? "Sem nome"])
   );
+
+  const initialFilters = parseBoardFilters(layoutPreferences?.layout_json);
 
   const canApprove = membership.role === "admin" || membership.role === "approver";
   const isAdmin = membership.role === "admin";
 
   return (
     <div className="flex h-screen flex-col bg-slate-50 dark:bg-slate-950">
-      <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <div className="mx-auto flex max-w-[100rem] items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2.5">
-            <LogoMark />
-            <div>
-              <p className="text-sm font-semibold leading-none text-slate-900 dark:text-slate-100">
-                {membership.organizations?.name ?? "Painel Relacional"}
-              </p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                {user?.email}
-                {membership.role ? ` · ${membership.role}` : ""}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {isAdmin && (
-              <Link href="/settings">
-                <Button variant="secondary">
-                  <Settings className="h-4 w-4" aria-hidden />
-                  Configurações
-                </Button>
-              </Link>
-            )}
-            <ThemeToggle />
-            <form action={logout}>
-              <Button type="submit" variant="secondary">
-                <LogOut className="h-4 w-4" aria-hidden />
-                Sair
-              </Button>
-            </form>
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        orgName={membership.organizations?.name ?? "Painel Relacional"}
+        userEmail={user?.email}
+        role={membership.role}
+        isAdmin={isAdmin}
+        active="board"
+      />
 
       <div className="mx-auto flex w-full max-w-[100rem] flex-1 overflow-hidden">
-        {statuses && statuses.length > 0 ? (
+        {statusesError || ticketsError ? (
+          <div className="flex flex-1 items-center justify-center px-6 text-center">
+            <p className="text-sm text-red-600 dark:text-red-400">
+              Não foi possível carregar o quadro. Tente recarregar a página.
+            </p>
+          </div>
+        ) : statuses && statuses.length > 0 ? (
           <KanbanBoard
             boardId={board.id}
             organizationId={membership.organization_id}
@@ -128,6 +127,8 @@ export default async function BoardPage() {
             sprints={sprints ?? []}
             membersById={membersById}
             developers={developers ?? []}
+            currentUserId={user?.id ?? ""}
+            initialFilters={initialFilters}
             canApprove={canApprove}
             isAdmin={isAdmin}
           />

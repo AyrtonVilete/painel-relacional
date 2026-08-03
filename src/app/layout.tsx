@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { THEME_INIT_SCRIPT } from "@/lib/theme/script";
+import { ToastProvider } from "@/components/ui/toast";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -31,7 +32,7 @@ export default function RootLayout({
       >
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-        {children}
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );

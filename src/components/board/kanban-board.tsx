@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { clsx } from "clsx";
 import {
   DndContext,
   DragOverlay,
+  KeyboardSensor,
   PointerSensor,
   closestCenter,
   useSensor,
@@ -19,6 +21,8 @@ import { TicketCard } from "@/components/board/ticket-card";
 import { CreateTicketDialog } from "@/components/board/create-ticket-dialog";
 import { TicketDetailDialog } from "@/components/board/ticket-detail-dialog";
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/ui/toast";
+import type { BoardFilters } from "@/lib/board/layout-preferences";
 import type { Tables } from "@/types/database.types";
 
 export function KanbanBoard({
@@ -31,6 +35,8 @@ export function KanbanBoard({
   sprints,
   membersById,
   developers,
+  currentUserId,
+  initialFilters,
   canApprove,
   isAdmin,
 }: {
@@ -43,14 +49,20 @@ export function KanbanBoard({
   sprints: Tables<"sprints">[];
   membersById: Map<string, string>;
   developers: { id: string; name: string }[];
+  currentUserId: string;
+  initialFilters: BoardFilters;
   canApprove: boolean;
   isAdmin: boolean;
 }) {
+  const { showToast } = useToast();
   const [tickets, setTickets] = useState(initialTickets);
-  const [sprintFilter, setSprintFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [developerFilter, setDeveloperFilter] = useState<string>("all");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [sprintFilter, setSprintFilter] = useState(initialFilters.sprintFilter);
+  const [statusFilter, setStatusFilter] = useState(initialFilters.statusFilter);
+  const [developerFilter, setDeveloperFilter] = useState(
+    initialFilters.developerFilter
+  );
+  const [onlyMine, setOnlyMine] = useState(initialFilters.onlyMine);
+  const [searchQuery, setSearchQuery] = useState(initialFilters.searchQuery);
   const [activeTicket, setActiveTicket] = useState<Tables<"tickets"> | null>(
     null
   );
@@ -60,8 +72,53 @@ export function KanbanBoard({
   );
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor)
   );
+
+  // Persist filter state per user/board so it survives reloads — skips the
+  // mount render (that's just what was just loaded from layout_preferences,
+  // re-saving it would be a no-op write) and debounces so fast changes
+  // (e.g. typing in the search box) don't fire a request per keystroke.
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (!currentUserId) return;
+
+    const timeout = setTimeout(() => {
+      const supabase = createClient();
+      supabase
+        .from("layout_preferences")
+        .upsert(
+          {
+            user_id: currentUserId,
+            board_id: boardId,
+            layout_json: {
+              statusFilter,
+              sprintFilter,
+              developerFilter,
+              onlyMine,
+              searchQuery,
+            },
+          },
+          { onConflict: "user_id,board_id" }
+        )
+        .then(() => {});
+    }, 600);
+
+    return () => clearTimeout(timeout);
+  }, [
+    currentUserId,
+    boardId,
+    statusFilter,
+    sprintFilter,
+    developerFilter,
+    onlyMine,
+    searchQuery,
+  ]);
 
   const clientsById = useMemo(
     () => new Map(clients.map((c) => [c.id, c.name])),
@@ -96,6 +153,10 @@ export function KanbanBoard({
       result = result.filter((t) => t.developer_id === developerFilter);
     }
 
+    if (onlyMine) {
+      result = result.filter((t) => t.created_by === currentUserId);
+    }
+
     const query = searchQuery.trim().toLowerCase();
     if (query) {
       result = result.filter(
@@ -107,7 +168,15 @@ export function KanbanBoard({
     }
 
     return result;
-  }, [tickets, sprintFilter, statusFilter, developerFilter, searchQuery]);
+  }, [
+    tickets,
+    sprintFilter,
+    statusFilter,
+    developerFilter,
+    onlyMine,
+    currentUserId,
+    searchQuery,
+  ]);
 
   const visibleStatuses = useMemo(
     () =>
@@ -149,6 +218,7 @@ export function KanbanBoard({
               t.id === ticketId ? { ...t, status_id: previousStatusId } : t
             )
           );
+          showToast("Não foi possível mover o chamado. Tente novamente.");
         }
       });
   }
@@ -189,10 +259,25 @@ export function KanbanBoard({
             />
           </div>
 
+          <button
+            type="button"
+            onClick={() => setOnlyMine((prev) => !prev)}
+            aria-pressed={onlyMine}
+            className={clsx(
+              "rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+              onlyMine
+                ? "border-indigo-600 bg-indigo-600 text-white dark:border-indigo-500 dark:bg-indigo-500"
+                : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+            )}
+          >
+            Meus chamados
+          </button>
+
           <Select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="w-56"
+            aria-label="Filtrar por status"
           >
             <option value="all">Todos os status</option>
             {statuses.map((s) => (
@@ -207,6 +292,7 @@ export function KanbanBoard({
               value={sprintFilter}
               onChange={(e) => setSprintFilter(e.target.value)}
               className="w-56"
+              aria-label="Filtrar por sprint"
             >
               <option value="all">Todos os chamados</option>
               <option value="none">Sem sprint</option>

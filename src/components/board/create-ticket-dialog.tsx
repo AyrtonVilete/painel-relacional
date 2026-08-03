@@ -8,7 +8,14 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ErrorAlert } from "@/components/ui/alert";
+import {
+  ClientSelect,
+  TypeSelect,
+  SprintSelect,
+  DeveloperSelect,
+} from "@/components/board/ticket-select-fields";
 import { createClient } from "@/lib/supabase/client";
+import { parseTicketFormFields } from "@/lib/tickets/parse-ticket-form";
 import type { Tables } from "@/types/database.types";
 
 export function CreateTicketDialog({
@@ -42,18 +49,11 @@ export function CreateTicketDialog({
     setError(null);
 
     const formData = new FormData(e.currentTarget);
-    const title = String(formData.get("title") ?? "").trim();
+    const { title, ticketNumber, error: validationError } =
+      parseTicketFormFields(formData);
 
-    if (!title) {
-      setError("Informe um título");
-      return;
-    }
-
-    const ticketNumberRaw = String(formData.get("ticketNumber") ?? "").trim();
-    const ticketNumber = Number(ticketNumberRaw);
-
-    if (!ticketNumberRaw || !Number.isInteger(ticketNumber) || ticketNumber <= 0) {
-      setError("Informe o número do chamado");
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -172,55 +172,13 @@ export function CreateTicketDialog({
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="clientId">Cliente</Label>
-            <Select id="clientId" name="clientId" defaultValue="">
-              <option value="">Nenhum</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="typeId">Tipo</Label>
-            <Select id="typeId" name="typeId" defaultValue="">
-              <option value="">Nenhum</option>
-              {ticketTypes.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </Select>
-          </div>
+          <ClientSelect clients={clients} />
+          <TypeSelect ticketTypes={ticketTypes} />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          {sprints.length > 0 && (
-            <div>
-              <Label htmlFor="sprintId">Sprint</Label>
-              <Select id="sprintId" name="sprintId" defaultValue="">
-                <option value="">Nenhuma</option>
-                {sprints.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          )}
-          <div>
-            <Label htmlFor="developerId">Desenvolvedor</Label>
-            <Select id="developerId" name="developerId" defaultValue="">
-              <option value="">Nenhum</option>
-              {developers.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </Select>
-          </div>
+          {sprints.length > 0 && <SprintSelect sprints={sprints} />}
+          <DeveloperSelect developers={developers} />
         </div>
 
         <div className="flex justify-end gap-3 pt-2">

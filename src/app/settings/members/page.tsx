@@ -1,6 +1,7 @@
 import { Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { removeMember } from "@/lib/members/actions";
+import { getCurrentMembership } from "@/lib/org/get-current-membership";
 import { InviteMemberForm } from "@/components/settings/invite-member-form";
 import { MemberRoleSelect } from "@/components/settings/member-role-select";
 import { DeleteButton } from "@/components/settings/delete-button";
@@ -15,14 +16,27 @@ export default async function MembersPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const currentMembership = await getCurrentMembership();
+
+  // RLS on `memberships` scopes rows to "any org I belong to", not just
+  // my current one — an explicit organization_id filter keeps the query
+  // correct even if multi-org membership is ever introduced, instead of
+  // relying solely on RLS to happen to return the right rows.
   const { data: memberships } = await supabase
     .from("memberships")
     .select("id, user_id, role, created_at")
+    .eq("organization_id", currentMembership?.organization_id ?? "")
     .order("created_at", { ascending: true });
 
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, full_name");
+  const memberUserIds = (memberships ?? []).map((m) => m.user_id);
+
+  const { data: profiles } =
+    memberUserIds.length > 0
+      ? await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", memberUserIds)
+      : { data: [] };
 
   const namesById = new Map(
     (profiles ?? []).map((p) => [p.id, p.full_name])
@@ -71,6 +85,9 @@ export default async function MembersPage() {
                       {!isSelf && (
                         <DeleteButton
                           action={removeMember.bind(null, m.id)}
+                          confirmMessage={`Remover ${
+                            namesById.get(m.user_id) || "este convite pendente"
+                          } da organização?`}
                         />
                       )}
                     </td>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { CheckCircle2, Trash2 } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,14 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ErrorAlert } from "@/components/ui/alert";
+import {
+  ClientSelect,
+  TypeSelect,
+  SprintSelect,
+  DeveloperSelect,
+} from "@/components/board/ticket-select-fields";
 import { createClient } from "@/lib/supabase/client";
+import { parseTicketFormFields } from "@/lib/tickets/parse-ticket-form";
 import type { Tables } from "@/types/database.types";
 
 type HistoryRow = Tables<"ticket_history">;
@@ -46,9 +53,16 @@ export function TicketDetailDialog({
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryRow[] | null>(null);
+  const [historyError, setHistoryError] = useState(false);
 
-  const statusesById = new Map(statuses.map((s) => [s.id, s.name]));
-  const sprintsById = new Map(sprints.map((s) => [s.id, s.name]));
+  const statusesById = useMemo(
+    () => new Map(statuses.map((s) => [s.id, s.name])),
+    [statuses]
+  );
+  const sprintsById = useMemo(
+    () => new Map(sprints.map((s) => [s.id, s.name])),
+    [sprints]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -59,8 +73,14 @@ export function TicketDetailDialog({
       .select("*")
       .eq("ticket_id", ticket.id)
       .order("moved_at", { ascending: false })
-      .then(({ data }) => {
-        if (!cancelled) setHistory(data ?? []);
+      .limit(50)
+      .then(({ data, error: fetchError }) => {
+        if (cancelled) return;
+        if (fetchError) {
+          setHistoryError(true);
+          return;
+        }
+        setHistory(data ?? []);
       });
 
     return () => {
@@ -73,18 +93,11 @@ export function TicketDetailDialog({
     setError(null);
 
     const formData = new FormData(e.currentTarget);
-    const title = String(formData.get("title") ?? "").trim();
+    const { title, ticketNumber, error: validationError } =
+      parseTicketFormFields(formData);
 
-    if (!title) {
-      setError("Informe um título");
-      return;
-    }
-
-    const ticketNumberRaw = String(formData.get("ticketNumber") ?? "").trim();
-    const ticketNumber = Number(ticketNumberRaw);
-
-    if (!ticketNumberRaw || !Number.isInteger(ticketNumber) || ticketNumber <= 0) {
-      setError("Informe o número do chamado");
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -302,42 +315,12 @@ export function TicketDetailDialog({
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="clientId">Cliente</Label>
-            <Select id="clientId" name="clientId" defaultValue={ticket.client_id ?? ""}>
-              <option value="">Nenhum</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="typeId">Tipo</Label>
-            <Select id="typeId" name="typeId" defaultValue={ticket.type_id ?? ""}>
-              <option value="">Nenhum</option>
-              {ticketTypes.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </Select>
-          </div>
+          <ClientSelect clients={clients} defaultValue={ticket.client_id} />
+          <TypeSelect ticketTypes={ticketTypes} defaultValue={ticket.type_id} />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="sprintId">Sprint</Label>
-            <Select id="sprintId" name="sprintId" defaultValue={ticket.sprint_id ?? ""}>
-              <option value="">Nenhuma</option>
-              {sprints.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </Select>
-          </div>
+          <SprintSelect sprints={sprints} defaultValue={ticket.sprint_id} />
           <div>
             <Label htmlFor="deadline">Prazo</Label>
             <Input
@@ -349,21 +332,7 @@ export function TicketDetailDialog({
           </div>
         </div>
 
-        <div>
-          <Label htmlFor="developerId">Desenvolvedor</Label>
-          <Select
-            id="developerId"
-            name="developerId"
-            defaultValue={ticket.developer_id ?? ""}
-          >
-            <option value="">Nenhum</option>
-            {developers.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </Select>
-        </div>
+        <DeveloperSelect developers={developers} defaultValue={ticket.developer_id} />
 
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>
@@ -380,7 +349,11 @@ export function TicketDetailDialog({
           Histórico
         </h3>
 
-        {history === null ? (
+        {historyError ? (
+          <p className="text-sm text-red-600 dark:text-red-400">
+            Não foi possível carregar o histórico. Tente novamente.
+          </p>
+        ) : history === null ? (
           <p className="text-sm text-slate-400 dark:text-slate-500">Carregando...</p>
         ) : history.length === 0 ? (
           <p className="text-sm text-slate-400 dark:text-slate-500">

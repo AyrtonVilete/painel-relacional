@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { clsx } from "clsx";
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export function Dialog({
   open,
@@ -18,11 +21,40 @@ export function Dialog({
   children: React.ReactNode;
   className?: string;
 }) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
     if (!open) return;
 
+    previouslyFocused.current = document.activeElement as HTMLElement | null;
+    const panel = panelRef.current;
+    const firstFocusable = panel?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+    (firstFocusable ?? panel)?.focus();
+
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+
+      if (e.key === "Tab" && panel) {
+        const focusable = Array.from(
+          panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+        ).filter((el) => el.offsetParent !== null);
+        if (focusable.length === 0) return;
+
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     }
 
     document.addEventListener("keydown", onKeyDown);
@@ -30,6 +62,7 @@ export function Dialog({
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = "";
+      previouslyFocused.current?.focus();
     };
   }, [open, onClose]);
 
@@ -43,9 +76,11 @@ export function Dialog({
         aria-hidden
       />
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label={title}
+        tabIndex={-1}
         className={clsx(
           "relative max-h-[90vh] w-full overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900",
           className ?? "max-w-lg"

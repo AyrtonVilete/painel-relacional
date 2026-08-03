@@ -33,19 +33,38 @@ export async function inviteMember(
     return { error: "Apenas administradores podem convidar membros" };
   }
 
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Recorded before sending the invite: handle_new_user() grants membership
+  // by matching this row's email, not from client-supplied auth metadata
+  // (which anyone could set via Supabase's public signUp endpoint). See
+  // migration 0013 for the full rationale.
+  const { data: pendingInvite, error: inviteRowError } = await supabase
+    .from("pending_invites")
+    .insert({
+      organization_id: membership.organization_id,
+      email: parsed.data.email,
+      role: parsed.data.role,
+      invited_by: user?.id,
+    })
+    .select("id")
+    .single();
+
+  if (inviteRowError || !pendingInvite) {
+    return { error: "Não foi possível registrar o convite" };
+  }
+
   const admin = createAdminClient();
   const { error } = await admin.auth.admin.inviteUserByEmail(
     parsed.data.email,
-    {
-      data: {
-        organization_id: membership.organization_id,
-        role: parsed.data.role,
-      },
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/invite/set-password`,
-    }
+    { redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/invite/set-password` }
   );
 
   if (error) {
+    await supabase.from("pending_invites").delete().eq("id", pendingInvite.id);
     return {
       error: error.message.includes("already been registered")
         ? "Este e-mail já está cadastrado"

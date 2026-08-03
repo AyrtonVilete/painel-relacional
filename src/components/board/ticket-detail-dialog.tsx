@@ -80,6 +80,14 @@ export function TicketDetailDialog({
       return;
     }
 
+    const ticketNumberRaw = String(formData.get("ticketNumber") ?? "").trim();
+    const ticketNumber = Number(ticketNumberRaw);
+
+    if (!ticketNumberRaw || !Number.isInteger(ticketNumber) || ticketNumber <= 0) {
+      setError("Informe o número do chamado");
+      return;
+    }
+
     setIsSaving(true);
     const supabase = createClient();
 
@@ -114,6 +122,7 @@ export function TicketDetailDialog({
       .from("tickets")
       .update({
         title,
+        ticket_number: ticketNumber,
         description: description || null,
         urgency: formData.get("urgency") as Tables<"tickets">["urgency"],
         client_id: clientValue || null,
@@ -130,7 +139,11 @@ export function TicketDetailDialog({
     setIsSaving(false);
 
     if (updateError || !data) {
-      setError("Não foi possível salvar as alterações");
+      setError(
+        updateError?.code === "23505"
+          ? "Já existe um chamado com esse número"
+          : "Não foi possível salvar as alterações"
+      );
       return;
     }
 
@@ -229,15 +242,30 @@ export function TicketDetailDialog({
           </div>
         </div>
 
-        <div>
-          <Label htmlFor="title">Título</Label>
-          <Input
-            id="title"
-            name="title"
-            defaultValue={ticket.title}
-            required
-            maxLength={200}
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="ticketNumber">Número do chamado</Label>
+            <Input
+              id="ticketNumber"
+              name="ticketNumber"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              step={1}
+              required
+              defaultValue={ticket.ticket_number}
+            />
+          </div>
+          <div>
+            <Label htmlFor="title">Título</Label>
+            <Input
+              id="title"
+              name="title"
+              defaultValue={ticket.title}
+              required
+              maxLength={200}
+            />
+          </div>
         </div>
 
         <div>

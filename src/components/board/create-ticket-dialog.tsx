@@ -49,6 +49,14 @@ export function CreateTicketDialog({
       return;
     }
 
+    const ticketNumberRaw = String(formData.get("ticketNumber") ?? "").trim();
+    const ticketNumber = Number(ticketNumberRaw);
+
+    if (!ticketNumberRaw || !Number.isInteger(ticketNumber) || ticketNumber <= 0) {
+      setError("Informe o número do chamado");
+      return;
+    }
+
     setIsSubmitting(true);
 
     const supabase = createClient();
@@ -76,6 +84,7 @@ export function CreateTicketDialog({
         board_id: boardId,
         status_id: statusId,
         title,
+        ticket_number: ticketNumber,
         description: description || null,
         urgency: formData.get("urgency") as Tables<"tickets">["urgency"],
         client_id: clientId || null,
@@ -91,7 +100,11 @@ export function CreateTicketDialog({
     setIsSubmitting(false);
 
     if (insertError || !data) {
-      setError("Não foi possível criar o chamado");
+      setError(
+        insertError?.code === "23505"
+          ? "Já existe um chamado com esse número"
+          : "Não foi possível criar o chamado"
+      );
       return;
     }
 
@@ -104,16 +117,31 @@ export function CreateTicketDialog({
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <ErrorAlert>{error}</ErrorAlert>}
 
-        <div>
-          <Label htmlFor="title">Título</Label>
-          <Input
-            id="title"
-            name="title"
-            required
-            maxLength={200}
-            placeholder="Descreva o chamado"
-            autoFocus
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="ticketNumber">Número do chamado</Label>
+            <Input
+              id="ticketNumber"
+              name="ticketNumber"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              step={1}
+              required
+              placeholder="Ex: 1029"
+            />
+          </div>
+          <div>
+            <Label htmlFor="title">Título</Label>
+            <Input
+              id="title"
+              name="title"
+              required
+              maxLength={200}
+              placeholder="Descreva o chamado"
+              autoFocus
+            />
+          </div>
         </div>
 
         <div>

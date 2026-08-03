@@ -163,6 +163,71 @@ export type Database = {
         }
         Relationships: []
       }
+      fin_open_finance_accounts: {
+        Row: {
+          balance: number | null
+          created_at: string
+          id: string
+          item_id: string
+          name: string | null
+          type: string | null
+          user_id: string
+        }
+        Insert: {
+          balance?: number | null
+          created_at?: string
+          id: string
+          item_id: string
+          name?: string | null
+          type?: string | null
+          user_id: string
+        }
+        Update: {
+          balance?: number | null
+          created_at?: string
+          id?: string
+          item_id?: string
+          name?: string | null
+          type?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_open_finance_accounts_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "fin_open_finance_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_open_finance_items: {
+        Row: {
+          connector_name: string | null
+          created_at: string
+          id: string
+          last_synced_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          connector_name?: string | null
+          created_at?: string
+          id: string
+          last_synced_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          connector_name?: string | null
+          created_at?: string
+          id?: string
+          last_synced_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       fin_profiles: {
         Row: {
           avatar_url: string | null
@@ -231,6 +296,7 @@ export type Database = {
           category_id: string | null
           created_at: string
           description: string | null
+          external_id: string | null
           household_id: string | null
           id: string
           installment_group_id: string | null
@@ -239,6 +305,8 @@ export type Database = {
           is_shared: boolean
           kind: Database["public"]["Enums"]["fin_transaction_kind"]
           occurred_at: string
+          open_finance_account_id: string | null
+          source: string
           user_id: string
         }
         Insert: {
@@ -246,6 +314,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           description?: string | null
+          external_id?: string | null
           household_id?: string | null
           id?: string
           installment_group_id?: string | null
@@ -254,6 +323,8 @@ export type Database = {
           is_shared?: boolean
           kind?: Database["public"]["Enums"]["fin_transaction_kind"]
           occurred_at?: string
+          open_finance_account_id?: string | null
+          source?: string
           user_id: string
         }
         Update: {
@@ -261,6 +332,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           description?: string | null
+          external_id?: string | null
           household_id?: string | null
           id?: string
           installment_group_id?: string | null
@@ -269,6 +341,8 @@ export type Database = {
           is_shared?: boolean
           kind?: Database["public"]["Enums"]["fin_transaction_kind"]
           occurred_at?: string
+          open_finance_account_id?: string | null
+          source?: string
           user_id?: string
         }
         Relationships: [
@@ -284,6 +358,13 @@ export type Database = {
             columns: ["household_id"]
             isOneToOne: false
             referencedRelation: "fin_households"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_transactions_open_finance_account_id_fkey"
+            columns: ["open_finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "fin_open_finance_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -594,7 +675,7 @@ export type Database = {
           organization_id: string
           sprint_id?: string | null
           status_id: string
-          ticket_number?: number
+          ticket_number: number
           title: string
           type_id?: string | null
           urgency?: Database["public"]["Enums"]["ticket_urgency"]

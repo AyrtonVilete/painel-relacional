@@ -7,6 +7,8 @@ import { clsx } from "clsx";
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+const FORM_FIELD_SELECTOR =
+  "textarea:not([disabled]), input:not([disabled]), select:not([disabled])";
 
 export function Dialog({
   open,
@@ -22,6 +24,7 @@ export function Dialog({
   className?: string;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -29,8 +32,31 @@ export function Dialog({
 
     previouslyFocused.current = document.activeElement as HTMLElement | null;
     const panel = panelRef.current;
-    const firstFocusable = panel?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
-    (firstFocusable ?? panel)?.focus();
+
+    // React's own `autoFocus` prop (e.g. the title field in
+    // create-ticket-dialog) already runs during commit, before this
+    // effect — if that already moved focus somewhere inside the panel,
+    // respect it instead of overriding it below.
+    const alreadyFocusedInPanel =
+      panel && document.activeElement && panel.contains(document.activeElement)
+        ? (document.activeElement as HTMLElement)
+        : null;
+
+    // Otherwise, prefer the first actual form field (input/select/
+    // textarea) — dialogs here are forms, and some (ticket-detail-dialog)
+    // put action buttons like "Aprovar"/delete before the form fields in
+    // DOM order, which would otherwise become the default focus target.
+    // Fall back to the first focusable element (skipping the close
+    // button, which is always first in DOM order but shouldn't steal
+    // initial focus), then the panel itself.
+    const firstFormField = panel?.querySelector<HTMLElement>(FORM_FIELD_SELECTOR);
+    const firstFocusable = panel
+      ? Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).find(
+          (el) => el !== closeButtonRef.current
+        )
+      : undefined;
+
+    (alreadyFocusedInPanel ?? firstFormField ?? firstFocusable ?? panel)?.focus();
 
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
@@ -91,6 +117,7 @@ export function Dialog({
             {title}
           </h2>
           <button
+            ref={closeButtonRef}
             type="button"
             onClick={onClose}
             aria-label="Fechar"

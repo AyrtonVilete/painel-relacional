@@ -45,6 +45,7 @@ export default async function BoardPage() {
     { data: ticketTypes },
     { data: sprints },
     { data: members },
+    { data: developers },
   ] = await Promise.all([
     supabase
       .from("statuses")
@@ -64,6 +65,11 @@ export default async function BoardPage() {
       .order("name"),
     supabase.from("sprints").select("*").eq("board_id", board.id).order("start_date"),
     supabase.from("profiles").select("id, full_name"),
+    supabase
+      .from("developers")
+      .select("id, name")
+      .eq("organization_id", membership.organization_id)
+      .order("name"),
   ]);
 
   const membersById = new Map(
@@ -121,6 +127,7 @@ export default async function BoardPage() {
             ticketTypes={ticketTypes ?? []}
             sprints={sprints ?? []}
             membersById={membersById}
+            developers={developers ?? []}
             canApprove={canApprove}
             isAdmin={isAdmin}
           />

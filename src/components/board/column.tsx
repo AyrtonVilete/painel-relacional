@@ -11,7 +11,7 @@ export function Column({
   tickets,
   clientsById,
   ticketTypesById,
-  membersById,
+  developersById,
   onAddTicket,
   onSelectTicket,
 }: {
@@ -19,7 +19,7 @@ export function Column({
   tickets: Tables<"tickets">[];
   clientsById: Map<string, string>;
   ticketTypesById: Map<string, string>;
-  membersById: Map<string, string>;
+  developersById: Map<string, string>;
   onAddTicket: () => void;
   onSelectTicket: (ticket: Tables<"tickets">) => void;
 }) {
@@ -68,7 +68,7 @@ export function Column({
             }
             developerName={
               ticket.developer_id
-                ? membersById.get(ticket.developer_id) ?? null
+                ? developersById.get(ticket.developer_id) ?? null
                 : null
             }
             onClick={() => onSelectTicket(ticket)}

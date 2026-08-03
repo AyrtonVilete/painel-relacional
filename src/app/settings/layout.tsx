@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Users, UserPlus, Tag, CalendarRange, ArrowLeft } from "lucide-react";
+import { Users, UserPlus, Tag, CalendarRange, Code2, ArrowLeft } from "lucide-react";
 import { getCurrentMembership } from "@/lib/org/get-current-membership";
 
 // Per-user data (admin gate, org membership) — never let Next.js's fetch
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: "/settings/members", label: "Membros", icon: UserPlus },
   { href: "/settings/clients", label: "Clientes", icon: Users },
   { href: "/settings/ticket-types", label: "Tipos de chamado", icon: Tag },
+  { href: "/settings/developers", label: "Desenvolvedores", icon: Code2 },
   { href: "/settings/sprints", label: "Sprints", icon: CalendarRange },
 ];
 

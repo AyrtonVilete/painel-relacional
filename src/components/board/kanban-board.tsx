@@ -30,6 +30,7 @@ export function KanbanBoard({
   ticketTypes,
   sprints,
   membersById,
+  developers,
   canApprove,
   isAdmin,
 }: {
@@ -41,6 +42,7 @@ export function KanbanBoard({
   ticketTypes: Tables<"ticket_types">[];
   sprints: Tables<"sprints">[];
   membersById: Map<string, string>;
+  developers: { id: string; name: string }[];
   canApprove: boolean;
   isAdmin: boolean;
 }) {
@@ -70,12 +72,9 @@ export function KanbanBoard({
     [ticketTypes]
   );
 
-  const developers = useMemo(
-    () =>
-      Array.from(membersById, ([id, name]) => ({ id, name })).sort((a, b) =>
-        a.name.localeCompare(b.name)
-      ),
-    [membersById]
+  const developersById = useMemo(
+    () => new Map(developers.map((d) => [d.id, d.name])),
+    [developers]
   );
 
   const visibleTickets = useMemo(() => {
@@ -252,7 +251,7 @@ export function KanbanBoard({
               tickets={visibleTickets.filter((t) => t.status_id === status.id)}
               clientsById={clientsById}
               ticketTypesById={ticketTypesById}
-              membersById={membersById}
+              developersById={developersById}
               onAddTicket={() => setCreateStatusId(status.id)}
               onSelectTicket={setSelectedTicket}
             />
@@ -275,7 +274,7 @@ export function KanbanBoard({
               }
               developerName={
                 activeTicket.developer_id
-                  ? membersById.get(activeTicket.developer_id) ?? null
+                  ? developersById.get(activeTicket.developer_id) ?? null
                   : null
               }
               onClick={() => {}}

@@ -22,6 +22,7 @@ export function TicketDetailDialog({
   clients,
   ticketTypes,
   membersById,
+  developers,
   canApprove,
   isAdmin,
   onUpdated,
@@ -34,6 +35,7 @@ export function TicketDetailDialog({
   clients: Tables<"clients">[];
   ticketTypes: Tables<"ticket_types">[];
   membersById: Map<string, string>;
+  developers: { id: string; name: string }[];
   canApprove: boolean;
   isAdmin: boolean;
   onUpdated: (ticket: Tables<"tickets">) => void;
@@ -104,6 +106,7 @@ export function TicketDetailDialog({
 
     const clientValue = String(formData.get("clientId") ?? "");
     const typeValue = String(formData.get("typeId") ?? "");
+    const developerValue = String(formData.get("developerId") ?? "");
     const deadlineValue = String(formData.get("deadline") ?? "");
     const description = String(formData.get("description") ?? "").trim();
 
@@ -115,6 +118,7 @@ export function TicketDetailDialog({
         urgency: formData.get("urgency") as Tables<"tickets">["urgency"],
         client_id: clientValue || null,
         type_id: typeValue || null,
+        developer_id: developerValue || null,
         deadline: deadlineValue || null,
         status_id: newStatusId,
         sprint_id: newSprintId,
@@ -178,7 +182,12 @@ export function TicketDetailDialog({
   }
 
   return (
-    <Dialog open onClose={onClose} title="Detalhes do chamado" className="max-w-2xl">
+    <Dialog
+      open
+      onClose={onClose}
+      title={`Chamado #${ticket.ticket_number}`}
+      className="max-w-2xl"
+    >
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <ErrorAlert>{error}</ErrorAlert>}
 
@@ -310,6 +319,22 @@ export function TicketDetailDialog({
               defaultValue={ticket.deadline ?? ""}
             />
           </div>
+        </div>
+
+        <div>
+          <Label htmlFor="developerId">Desenvolvedor</Label>
+          <Select
+            id="developerId"
+            name="developerId"
+            defaultValue={ticket.developer_id ?? ""}
+          >
+            <option value="">Nenhum</option>
+            {developers.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </Select>
         </div>
 
         <div className="flex justify-end gap-3 pt-2">

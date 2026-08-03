@@ -20,6 +20,7 @@ export function CreateTicketDialog({
   clients,
   ticketTypes,
   sprints,
+  developers,
   onCreated,
 }: {
   open: boolean;
@@ -30,6 +31,7 @@ export function CreateTicketDialog({
   clients: Tables<"clients">[];
   ticketTypes: Tables<"ticket_types">[];
   sprints: Tables<"sprints">[];
+  developers: { id: string; name: string }[];
   onCreated: (ticket: Tables<"tickets">) => void;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,6 +65,7 @@ export function CreateTicketDialog({
     const clientId = String(formData.get("clientId") ?? "");
     const typeId = String(formData.get("typeId") ?? "");
     const sprintId = String(formData.get("sprintId") ?? "");
+    const developerId = String(formData.get("developerId") ?? "");
     const deadline = String(formData.get("deadline") ?? "");
     const description = String(formData.get("description") ?? "").trim();
 
@@ -78,6 +81,7 @@ export function CreateTicketDialog({
         client_id: clientId || null,
         type_id: typeId || null,
         sprint_id: sprintId || null,
+        developer_id: developerId || null,
         deadline: deadline || null,
         created_by: user.id,
       })
@@ -164,19 +168,32 @@ export function CreateTicketDialog({
           </div>
         </div>
 
-        {sprints.length > 0 && (
+        <div className="grid grid-cols-2 gap-4">
+          {sprints.length > 0 && (
+            <div>
+              <Label htmlFor="sprintId">Sprint</Label>
+              <Select id="sprintId" name="sprintId" defaultValue="">
+                <option value="">Nenhuma</option>
+                {sprints.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
           <div>
-            <Label htmlFor="sprintId">Sprint</Label>
-            <Select id="sprintId" name="sprintId" defaultValue="">
-              <option value="">Nenhuma</option>
-              {sprints.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
+            <Label htmlFor="developerId">Desenvolvedor</Label>
+            <Select id="developerId" name="developerId" defaultValue="">
+              <option value="">Nenhum</option>
+              {developers.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
                 </option>
               ))}
             </Select>
           </div>
-        )}
+        </div>
 
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>

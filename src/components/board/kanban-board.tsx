@@ -11,7 +11,9 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
+import { Search } from "lucide-react";
 import { Select } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Column } from "@/components/board/column";
 import { TicketCard } from "@/components/board/ticket-card";
 import { CreateTicketDialog } from "@/components/board/create-ticket-dialog";
@@ -45,6 +47,8 @@ export function KanbanBoard({
   const [tickets, setTickets] = useState(initialTickets);
   const [sprintFilter, setSprintFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [developerFilter, setDeveloperFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [activeTicket, setActiveTicket] = useState<Tables<"tickets"> | null>(
     null
   );
@@ -66,6 +70,14 @@ export function KanbanBoard({
     [ticketTypes]
   );
 
+  const developers = useMemo(
+    () =>
+      Array.from(membersById, ([id, name]) => ({ id, name })).sort((a, b) =>
+        a.name.localeCompare(b.name)
+      ),
+    [membersById]
+  );
+
   const visibleTickets = useMemo(() => {
     let result = tickets;
 
@@ -79,8 +91,24 @@ export function KanbanBoard({
       result = result.filter((t) => t.status_id === statusFilter);
     }
 
+    if (developerFilter === "none") {
+      result = result.filter((t) => !t.developer_id);
+    } else if (developerFilter !== "all") {
+      result = result.filter((t) => t.developer_id === developerFilter);
+    }
+
+    const query = searchQuery.trim().toLowerCase();
+    if (query) {
+      result = result.filter(
+        (t) =>
+          t.title.toLowerCase().includes(query) ||
+          (t.description ?? "").toLowerCase().includes(query) ||
+          String(t.ticket_number).includes(query)
+      );
+    }
+
     return result;
-  }, [tickets, sprintFilter, statusFilter]);
+  }, [tickets, sprintFilter, statusFilter, developerFilter, searchQuery]);
 
   const visibleStatuses = useMemo(
     () =>
@@ -141,13 +169,27 @@ export function KanbanBoard({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="mb-4 flex items-center justify-between px-6 pt-4">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 px-6 pt-4">
         <p className="text-sm text-slate-500 dark:text-slate-400">
           {visibleTickets.length}{" "}
           {visibleTickets.length === 1 ? "chamado" : "chamados"}
         </p>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+              aria-hidden
+            />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar por título, descrição ou nº do chamado"
+              className="w-72 pl-9"
+              aria-label="Buscar chamados"
+            />
+          </div>
+
           <Select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -176,6 +218,23 @@ export function KanbanBoard({
               ))}
             </Select>
           )}
+
+          {developers.length > 0 && (
+            <Select
+              value={developerFilter}
+              onChange={(e) => setDeveloperFilter(e.target.value)}
+              className="w-56"
+              aria-label="Filtrar por desenvolvedor"
+            >
+              <option value="all">Todos os desenvolvedores</option>
+              <option value="none">Sem desenvolvedor</option>
+              {developers.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </Select>
+          )}
         </div>
       </div>
 
@@ -193,6 +252,7 @@ export function KanbanBoard({
               tickets={visibleTickets.filter((t) => t.status_id === status.id)}
               clientsById={clientsById}
               ticketTypesById={ticketTypesById}
+              membersById={membersById}
               onAddTicket={() => setCreateStatusId(status.id)}
               onSelectTicket={setSelectedTicket}
             />
@@ -213,6 +273,11 @@ export function KanbanBoard({
                   ? ticketTypesById.get(activeTicket.type_id) ?? null
                   : null
               }
+              developerName={
+                activeTicket.developer_id
+                  ? membersById.get(activeTicket.developer_id) ?? null
+                  : null
+              }
               onClick={() => {}}
             />
           )}
@@ -229,6 +294,7 @@ export function KanbanBoard({
           clients={clients}
           ticketTypes={ticketTypes}
           sprints={sprints}
+          developers={developers}
           onCreated={handleCreated}
         />
       )}
@@ -242,6 +308,7 @@ export function KanbanBoard({
           clients={clients}
           ticketTypes={ticketTypes}
           membersById={membersById}
+          developers={developers}
           canApprove={canApprove}
           isAdmin={isAdmin}
           onUpdated={handleUpdated}

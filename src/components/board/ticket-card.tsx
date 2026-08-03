@@ -14,11 +14,13 @@ export function TicketCard({
   ticket,
   clientName,
   typeName,
+  developerName,
   onClick,
 }: {
   ticket: Tables<"tickets">;
   clientName: string | null;
   typeName: string | null;
+  developerName: string | null;
   onClick: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
@@ -40,6 +42,9 @@ export function TicketCard({
         isDragging && "opacity-40"
       )}
     >
+      <p className="text-xs font-medium text-slate-400 dark:text-slate-500">
+        #{ticket.ticket_number}
+      </p>
       <p className="text-sm font-medium leading-snug text-slate-800 dark:text-slate-100">
         {ticket.title}
       </p>
@@ -56,6 +61,12 @@ export function TicketCard({
       {(clientName || typeName) && (
         <p className="mt-2 truncate text-xs text-slate-500 dark:text-slate-400">
           {[clientName, typeName].filter(Boolean).join(" · ")}
+        </p>
+      )}
+
+      {developerName && (
+        <p className="mt-1 truncate text-xs text-slate-400 dark:text-slate-500">
+          Dev: {developerName}
         </p>
       )}
 

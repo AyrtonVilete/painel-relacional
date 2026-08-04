@@ -396,6 +396,7 @@ export function KanbanBoard({
           developers={developers}
           canApprove={canApprove}
           isAdmin={isAdmin}
+          currentUserId={currentUserId}
           onUpdated={handleUpdated}
           onDeleted={handleDeleted}
         />

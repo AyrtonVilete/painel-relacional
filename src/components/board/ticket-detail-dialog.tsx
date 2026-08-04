@@ -20,6 +20,7 @@ import { parseTicketFormFields } from "@/lib/tickets/parse-ticket-form";
 import type { Tables } from "@/types/database.types";
 
 type HistoryRow = Tables<"ticket_history">;
+type CommentRow = Tables<"ticket_comments">;
 
 export function TicketDetailDialog({
   ticket,
@@ -32,6 +33,7 @@ export function TicketDetailDialog({
   developers,
   canApprove,
   isAdmin,
+  currentUserId,
   onUpdated,
   onDeleted,
 }: {
@@ -45,6 +47,7 @@ export function TicketDetailDialog({
   developers: { id: string; name: string }[];
   canApprove: boolean;
   isAdmin: boolean;
+  currentUserId: string;
   onUpdated: (ticket: Tables<"tickets">) => void;
   onDeleted: (ticketId: string) => void;
 }) {
@@ -54,6 +57,11 @@ export function TicketDetailDialog({
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryRow[] | null>(null);
   const [historyError, setHistoryError] = useState(false);
+  const [comments, setComments] = useState<CommentRow[] | null>(null);
+  const [commentsError, setCommentsError] = useState(false);
+  const [commentBody, setCommentBody] = useState("");
+  const [isPostingComment, setIsPostingComment] = useState(false);
+  const [postCommentError, setPostCommentError] = useState<string | null>(null);
 
   const statusesById = useMemo(
     () => new Map(statuses.map((s) => [s.id, s.name])),
@@ -87,6 +95,55 @@ export function TicketDetailDialog({
       cancelled = true;
     };
   }, [ticket.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const supabase = createClient();
+
+    supabase
+      .from("ticket_comments")
+      .select("*")
+      .eq("ticket_id", ticket.id)
+      .order("created_at", { ascending: true })
+      .then(({ data, error: fetchError }) => {
+        if (cancelled) return;
+        if (fetchError) {
+          setCommentsError(true);
+          return;
+        }
+        setComments(data ?? []);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ticket.id]);
+
+  async function handlePostComment(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const body = commentBody.trim();
+    if (!body) return;
+
+    setIsPostingComment(true);
+    setPostCommentError(null);
+    const supabase = createClient();
+
+    const { data, error: insertError } = await supabase
+      .from("ticket_comments")
+      .insert({ ticket_id: ticket.id, author_id: currentUserId, body })
+      .select()
+      .single();
+
+    setIsPostingComment(false);
+
+    if (insertError || !data) {
+      setPostCommentError("Não foi possível enviar o comentário");
+      return;
+    }
+
+    setComments((prev) => [...(prev ?? []), data]);
+    setCommentBody("");
+  }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -343,6 +400,68 @@ export function TicketDetailDialog({
           </Button>
         </div>
       </form>
+
+      <div className="mt-6 border-t border-slate-200 pt-5 dark:border-slate-800">
+        <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">
+          Comentários
+        </h3>
+
+        {commentsError ? (
+          <p className="text-sm text-red-600 dark:text-red-400">
+            Não foi possível carregar os comentários. Tente novamente.
+          </p>
+        ) : comments === null ? (
+          <p className="text-sm text-slate-400 dark:text-slate-500">Carregando...</p>
+        ) : (
+          <ul className="mb-4 space-y-3">
+            {comments.length === 0 && (
+              <li className="text-sm text-slate-400 dark:text-slate-500">
+                Nenhum comentário ainda.
+              </li>
+            )}
+            {comments.map((comment) => (
+              <li
+                key={comment.id}
+                className="rounded-md bg-slate-50 px-3 py-2 dark:bg-slate-900"
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                    {membersById.get(comment.author_id) ?? "Alguém"}
+                  </span>
+                  <span className="text-xs text-slate-400 dark:text-slate-500">
+                    {new Date(comment.created_at).toLocaleString("pt-BR")}
+                  </span>
+                </div>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-slate-600 dark:text-slate-300">
+                  {comment.body}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <form onSubmit={handlePostComment} className="space-y-2">
+          {postCommentError && <ErrorAlert>{postCommentError}</ErrorAlert>}
+          <Textarea
+            aria-label="Novo comentário"
+            rows={2}
+            maxLength={2000}
+            placeholder="Escreva um comentário..."
+            value={commentBody}
+            onChange={(e) => setCommentBody(e.target.value)}
+          />
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              variant="secondary"
+              isLoading={isPostingComment}
+              disabled={!commentBody.trim()}
+            >
+              Comentar
+            </Button>
+          </div>
+        </form>
+      </div>
 
       <div className="mt-6 border-t border-slate-200 pt-5 dark:border-slate-800">
         <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">

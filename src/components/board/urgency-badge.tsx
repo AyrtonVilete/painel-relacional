@@ -30,4 +30,14 @@ export function UrgencyBadge({ urgency }: { urgency: TicketUrgency }) {
   );
 }
 
-export { URGENCY_LABELS };
+// Most urgent first — used to sort tickets within a column so the ones
+// that matter most surface at the top instead of just showing registration
+// order.
+const URGENCY_RANK: Record<TicketUrgency, number> = {
+  critical: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+};
+
+export { URGENCY_LABELS, URGENCY_RANK };

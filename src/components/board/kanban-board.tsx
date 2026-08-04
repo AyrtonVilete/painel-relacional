@@ -17,6 +17,7 @@ import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Column } from "@/components/board/column";
 import { FilterChip } from "@/components/board/filter-chip";
+import { URGENCY_RANK } from "@/components/board/urgency-badge";
 import { TicketCard } from "@/components/board/ticket-card";
 import { CreateTicketDialog } from "@/components/board/create-ticket-dialog";
 import { TicketDetailDialog } from "@/components/board/ticket-detail-dialog";
@@ -188,7 +189,12 @@ export function KanbanBoard({
       );
     }
 
-    return result;
+    // Most urgent first within each column — otherwise cards just sit in
+    // whatever order they were fetched (registration order), burying
+    // critical/high tickets under older low-priority ones.
+    return [...result].sort(
+      (a, b) => URGENCY_RANK[a.urgency] - URGENCY_RANK[b.urgency]
+    );
   }, [
     tickets,
     sprintFilter,

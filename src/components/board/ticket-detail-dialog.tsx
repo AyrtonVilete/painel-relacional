@@ -1,7 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { CheckCircle2, Trash2 } from "lucide-react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
+import { CheckCircle2, Paperclip, Trash2 } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +27,16 @@ import type { Tables } from "@/types/database.types";
 
 type HistoryRow = Tables<"ticket_history">;
 type CommentRow = Tables<"ticket_comments">;
+type AttachmentRow = Tables<"ticket_attachments">;
+
+const ATTACHMENTS_BUCKET = "ticket-attachments";
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 export function TicketDetailDialog({
   ticket,
@@ -62,6 +78,11 @@ export function TicketDetailDialog({
   const [commentBody, setCommentBody] = useState("");
   const [isPostingComment, setIsPostingComment] = useState(false);
   const [postCommentError, setPostCommentError] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<AttachmentRow[] | null>(null);
+  const [attachmentsError, setAttachmentsError] = useState(false);
+  const [signedUrls, setSignedUrls] = useState<Map<string, string>>(new Map());
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const statusesById = useMemo(
     () => new Map(statuses.map((s) => [s.id, s.name])),
@@ -118,6 +139,104 @@ export function TicketDetailDialog({
       cancelled = true;
     };
   }, [ticket.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const supabase = createClient();
+
+    supabase
+      .from("ticket_attachments")
+      .select("*")
+      .eq("ticket_id", ticket.id)
+      .order("created_at", { ascending: true })
+      .then(async ({ data, error: fetchError }) => {
+        if (cancelled) return;
+        if (fetchError) {
+          setAttachmentsError(true);
+          return;
+        }
+        setAttachments(data ?? []);
+
+        if (data && data.length > 0) {
+          const { data: signedData } = await supabase.storage
+            .from(ATTACHMENTS_BUCKET)
+            .createSignedUrls(
+              data.map((a) => a.file_path),
+              3600
+            );
+          if (!cancelled && signedData) {
+            setSignedUrls(
+              new Map(
+                signedData
+                  .filter((s) => s.signedUrl && s.path)
+                  .map((s) => [s.path as string, s.signedUrl as string])
+              )
+            );
+          }
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ticket.id]);
+
+  async function handleFileUpload(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      setUploadError("Arquivo muito grande (máximo de 10MB)");
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError(null);
+    const supabase = createClient();
+
+    const path = `${ticket.organization_id}/${ticket.id}/${crypto.randomUUID()}-${file.name}`;
+    const { error: uploadStorageError } = await supabase.storage
+      .from(ATTACHMENTS_BUCKET)
+      .upload(path, file);
+
+    if (uploadStorageError) {
+      setIsUploading(false);
+      setUploadError("Não foi possível enviar o arquivo");
+      return;
+    }
+
+    const { data, error: insertError } = await supabase
+      .from("ticket_attachments")
+      .insert({
+        ticket_id: ticket.id,
+        uploaded_by: currentUserId,
+        file_path: path,
+        file_name: file.name,
+        file_size: file.size,
+        content_type: file.type || "application/octet-stream",
+      })
+      .select()
+      .single();
+
+    if (insertError || !data) {
+      setIsUploading(false);
+      setUploadError("Não foi possível salvar o anexo");
+      return;
+    }
+
+    setAttachments((prev) => [...(prev ?? []), data]);
+
+    const { data: signedData } = await supabase.storage
+      .from(ATTACHMENTS_BUCKET)
+      .createSignedUrl(path, 3600);
+
+    setIsUploading(false);
+
+    if (signedData?.signedUrl) {
+      setSignedUrls((prev) => new Map(prev).set(path, signedData.signedUrl));
+    }
+  }
 
   async function handlePostComment(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -400,6 +519,76 @@ export function TicketDetailDialog({
           </Button>
         </div>
       </form>
+
+      <div className="mt-6 border-t border-slate-200 pt-5 dark:border-slate-800">
+        <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">
+          Anexos
+        </h3>
+
+        {uploadError && <ErrorAlert>{uploadError}</ErrorAlert>}
+
+        {attachmentsError ? (
+          <p className="text-sm text-red-600 dark:text-red-400">
+            Não foi possível carregar os anexos. Tente novamente.
+          </p>
+        ) : attachments === null ? (
+          <p className="text-sm text-slate-400 dark:text-slate-500">Carregando...</p>
+        ) : attachments.length === 0 ? (
+          <p className="mb-3 text-sm text-slate-400 dark:text-slate-500">
+            Nenhum anexo ainda.
+          </p>
+        ) : (
+          <ul className="mb-3 space-y-2">
+            {attachments.map((attachment) => {
+              const url = signedUrls.get(attachment.file_path);
+              return (
+                <li key={attachment.id} className="flex items-center gap-2 text-sm">
+                  <Paperclip
+                    className="h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500"
+                    aria-hidden
+                  />
+                  {url ? (
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="truncate font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+                    >
+                      {attachment.file_name}
+                    </a>
+                  ) : (
+                    <span className="truncate text-slate-600 dark:text-slate-300">
+                      {attachment.file_name}
+                    </span>
+                  )}
+                  <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">
+                    {formatFileSize(attachment.file_size)}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        <label className="inline-block">
+          <span
+            className={
+              "inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800" +
+              (isUploading ? " pointer-events-none opacity-50" : "")
+            }
+          >
+            <Paperclip className="h-4 w-4" aria-hidden />
+            {isUploading ? "Enviando..." : "Anexar arquivo"}
+          </span>
+          <input
+            type="file"
+            className="hidden"
+            disabled={isUploading}
+            onChange={handleFileUpload}
+            accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain,text/csv,application/json,application/zip"
+          />
+        </label>
+      </div>
 
       <div className="mt-6 border-t border-slate-200 pt-5 dark:border-slate-800">
         <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">

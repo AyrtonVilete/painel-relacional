@@ -289,6 +289,7 @@ export type Database = {
           board_id: string
           created_at: string
           id: string
+          is_terminal: boolean
           name: string
           order: number
         }
@@ -296,6 +297,7 @@ export type Database = {
           board_id: string
           created_at?: string
           id?: string
+          is_terminal?: boolean
           name: string
           order?: number
         }
@@ -303,6 +305,7 @@ export type Database = {
           board_id?: string
           created_at?: string
           id?: string
+          is_terminal?: boolean
           name?: string
           order?: number
         }

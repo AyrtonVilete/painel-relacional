@@ -1,3 +1,4 @@
+import { endOfWeek, format, startOfWeek, subWeeks } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
 import { AppHeader } from "@/components/layout/app-header";
 import { getCurrentMembership } from "@/lib/org/get-current-membership";
@@ -38,27 +39,109 @@ export default async function DashboardPage() {
     return null;
   }
 
-  const [{ data: statuses }, { data: tickets }, { data: sprints }] =
+  const [{ data: statuses }, { data: tickets }, { data: sprints }, { data: developers }] =
     await Promise.all([
       supabase
         .from("statuses")
-        .select("id, name")
+        .select("id, name, is_terminal")
         .eq("board_id", board.id)
         .order("order", { ascending: true }),
       supabase
         .from("tickets")
-        .select("id, status_id, urgency, approved, deadline, sprint_id, developer_id")
+        .select(
+          "id, status_id, urgency, approved, deadline, sprint_id, developer_id, created_at"
+        )
         .eq("board_id", board.id),
       supabase
         .from("sprints")
         .select("id, name")
         .eq("board_id", board.id)
         .order("start_date", { ascending: true }),
+      supabase
+        .from("developers")
+        .select("id, name")
+        .eq("organization_id", membership.organization_id)
+        .order("name"),
     ]);
 
   const safeTickets = tickets ?? [];
   const safeStatuses = statuses ?? [];
   const safeSprints = sprints ?? [];
+  const safeDevelopers = developers ?? [];
+
+  const terminalStatusIds = new Set(
+    safeStatuses.filter((s) => s.is_terminal).map((s) => s.id)
+  );
+
+  const ticketIds = safeTickets.map((t) => t.id);
+  const { data: history } =
+    ticketIds.length > 0
+      ? await supabase
+          .from("ticket_history")
+          .select("ticket_id, to_status_id, moved_at")
+          .in("ticket_id", ticketIds)
+          .order("moved_at", { ascending: true })
+      : { data: [] };
+
+  // First moment each ticket entered a terminal status, if ever.
+  const resolvedAtByTicket = new Map<string, string>();
+  for (const entry of history ?? []) {
+    if (resolvedAtByTicket.has(entry.ticket_id)) continue;
+    if (entry.to_status_id && terminalStatusIds.has(entry.to_status_id)) {
+      resolvedAtByTicket.set(entry.ticket_id, entry.moved_at);
+    }
+  }
+
+  const resolutionDurationsMs = safeTickets
+    .map((t) => {
+      const resolvedAt = resolvedAtByTicket.get(t.id);
+      return resolvedAt
+        ? new Date(resolvedAt).getTime() - new Date(t.created_at).getTime()
+        : null;
+    })
+    .filter((ms): ms is number => ms !== null);
+
+  const avgResolutionDays =
+    resolutionDurationsMs.length > 0
+      ? resolutionDurationsMs.reduce((a, b) => a + b, 0) /
+        resolutionDurationsMs.length /
+        (1000 * 60 * 60 * 24)
+      : null;
+
+  const now = new Date();
+  const throughput = Array.from({ length: 8 }).map((_, i) => {
+    const start = startOfWeek(subWeeks(now, 7 - i), { weekStartsOn: 1 });
+    const end = endOfWeek(start, { weekStartsOn: 1 });
+
+    const criados = safeTickets.filter((t) => {
+      const d = new Date(t.created_at);
+      return d >= start && d <= end;
+    }).length;
+
+    const resolvidos = safeTickets.filter((t) => {
+      const resolvedAt = resolvedAtByTicket.get(t.id);
+      if (!resolvedAt) return false;
+      const d = new Date(resolvedAt);
+      return d >= start && d <= end;
+    }).length;
+
+    return { name: format(start, "dd/MM"), criados, resolvidos };
+  });
+
+  const byDeveloper = [
+    ...safeDevelopers.map((d) => ({
+      name: d.name,
+      value: safeTickets.filter(
+        (t) => t.developer_id === d.id && !terminalStatusIds.has(t.status_id)
+      ).length,
+    })),
+    {
+      name: "Sem desenvolvedor",
+      value: safeTickets.filter(
+        (t) => !t.developer_id && !terminalStatusIds.has(t.status_id)
+      ).length,
+    },
+  ];
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -116,9 +199,12 @@ export default async function DashboardPage() {
           pendingApproval={pendingApproval}
           overdue={overdue}
           unassigned={unassigned}
+          avgResolutionDays={avgResolutionDays}
           byStatus={byStatus}
           byUrgency={byUrgency}
           bySprint={bySprint}
+          throughput={throughput}
+          byDeveloper={byDeveloper}
         />
       </main>
     </div>

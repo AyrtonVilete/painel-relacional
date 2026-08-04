@@ -1,7 +1,9 @@
 import { ListChecks } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentMembership } from "@/lib/org/get-current-membership";
-import { StatusTerminalToggle } from "@/components/settings/status-terminal-toggle";
+import { createStatus } from "@/lib/statuses/actions";
+import { StatusRow } from "@/components/settings/status-row";
+import { SimpleNameForm } from "@/components/settings/simple-name-form";
 import { EmptyState } from "@/components/ui/empty-state";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +31,8 @@ export default async function StatusesPage() {
         .order("order", { ascending: true })
     : { data: [] };
 
+  const safeStatuses = statuses ?? [];
+
   return (
     <div>
       <div className="mb-8">
@@ -36,27 +40,32 @@ export default async function StatusesPage() {
           Status
         </h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Marque quais colunas do quadro representam um chamado concluído —
-          usado para calcular tempo de resolução e throughput no dashboard.
+          As colunas do quadro — crie, renomeie, reordene ou exclua conforme o
+          fluxo de trabalho da sua equipe. Marque quais representam um
+          chamado concluído (usado para calcular tempo de resolução e
+          throughput no dashboard).
         </p>
       </div>
 
-      {statuses && statuses.length > 0 ? (
+      <div className="mb-8 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+        <SimpleNameForm
+          action={createStatus}
+          placeholder="Nome do novo status"
+          submitLabel="Adicionar"
+        />
+      </div>
+
+      {safeStatuses.length > 0 ? (
         <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
           <table className="w-full text-sm">
             <tbody className="divide-y divide-slate-200 bg-white dark:divide-slate-800 dark:bg-slate-900">
-              {statuses.map((status) => (
-                <tr key={status.id}>
-                  <td className="px-5 py-3 text-slate-800 dark:text-slate-200">
-                    {status.name}
-                  </td>
-                  <td className="px-5 py-3 text-right">
-                    <StatusTerminalToggle
-                      statusId={status.id}
-                      defaultChecked={status.is_terminal}
-                    />
-                  </td>
-                </tr>
+              {safeStatuses.map((status, index) => (
+                <StatusRow
+                  key={status.id}
+                  status={status}
+                  isFirst={index === 0}
+                  isLast={index === safeStatuses.length - 1}
+                />
               ))}
             </tbody>
           </table>

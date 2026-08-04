@@ -14,9 +14,9 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { Search, X } from "lucide-react";
-import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Column } from "@/components/board/column";
+import { FilterChip } from "@/components/board/filter-chip";
 import { TicketCard } from "@/components/board/ticket-card";
 import { CreateTicketDialog } from "@/components/board/create-ticket-dialog";
 import { TicketDetailDialog } from "@/components/board/ticket-detail-dialog";
@@ -149,26 +149,22 @@ export function KanbanBoard({
   const visibleTickets = useMemo(() => {
     let result = tickets;
 
-    if (sprintFilter === "none") {
-      result = result.filter((t) => !t.sprint_id);
-    } else if (sprintFilter !== "all") {
-      result = result.filter((t) => t.sprint_id === sprintFilter);
+    if (sprintFilter.length > 0) {
+      result = result.filter((t) => sprintFilter.includes(t.sprint_id ?? "none"));
     }
 
-    if (statusFilter !== "all") {
-      result = result.filter((t) => t.status_id === statusFilter);
+    if (statusFilter.length > 0) {
+      result = result.filter((t) => statusFilter.includes(t.status_id));
     }
 
-    if (developerFilter === "none") {
-      result = result.filter((t) => !t.developer_id);
-    } else if (developerFilter !== "all") {
-      result = result.filter((t) => t.developer_id === developerFilter);
+    if (developerFilter.length > 0) {
+      result = result.filter((t) =>
+        developerFilter.includes(t.developer_id ?? "none")
+      );
     }
 
-    if (clientFilter === "none") {
-      result = result.filter((t) => !t.client_id);
-    } else if (clientFilter !== "all") {
-      result = result.filter((t) => t.client_id === clientFilter);
+    if (clientFilter.length > 0) {
+      result = result.filter((t) => clientFilter.includes(t.client_id ?? "none"));
     }
 
     if (onlyMine) {
@@ -207,10 +203,10 @@ export function KanbanBoard({
   ]);
 
   const hasActiveFilters =
-    statusFilter !== DEFAULT_BOARD_FILTERS.statusFilter ||
-    sprintFilter !== DEFAULT_BOARD_FILTERS.sprintFilter ||
-    developerFilter !== DEFAULT_BOARD_FILTERS.developerFilter ||
-    clientFilter !== DEFAULT_BOARD_FILTERS.clientFilter ||
+    statusFilter.length > 0 ||
+    sprintFilter.length > 0 ||
+    developerFilter.length > 0 ||
+    clientFilter.length > 0 ||
     onlyMine !== DEFAULT_BOARD_FILTERS.onlyMine ||
     searchQuery.trim() !== "" ||
     createdFrom !== "" ||
@@ -229,9 +225,9 @@ export function KanbanBoard({
 
   const visibleStatuses = useMemo(
     () =>
-      statusFilter === "all"
+      statusFilter.length === 0
         ? statuses
-        : statuses.filter((s) => s.id === statusFilter),
+        : statuses.filter((s) => statusFilter.includes(s.id)),
     [statuses, statusFilter]
   );
 
@@ -339,69 +335,47 @@ export function KanbanBoard({
             Meus chamados
           </button>
 
-          <Select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-56"
-            aria-label="Filtrar por status"
-          >
-            <option value="all">Todos os status</option>
-            {statuses.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </Select>
+          <FilterChip
+            label="Status"
+            options={statuses.map((s) => ({ value: s.id, label: s.name }))}
+            selected={statusFilter}
+            onApply={setStatusFilter}
+          />
 
           {sprints.length > 0 && (
-            <Select
-              value={sprintFilter}
-              onChange={(e) => setSprintFilter(e.target.value)}
-              className="w-56"
-              aria-label="Filtrar por sprint"
-            >
-              <option value="all">Todos os chamados</option>
-              <option value="none">Sem sprint</option>
-              {sprints.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </Select>
+            <FilterChip
+              label="Sprint"
+              options={[
+                { value: "none", label: "Sem sprint" },
+                ...sprints.map((s) => ({ value: s.id, label: s.name })),
+              ]}
+              selected={sprintFilter}
+              onApply={setSprintFilter}
+            />
           )}
 
           {developers.length > 0 && (
-            <Select
-              value={developerFilter}
-              onChange={(e) => setDeveloperFilter(e.target.value)}
-              className="w-56"
-              aria-label="Filtrar por desenvolvedor"
-            >
-              <option value="all">Todos os desenvolvedores</option>
-              <option value="none">Sem desenvolvedor</option>
-              {developers.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </Select>
+            <FilterChip
+              label="Desenvolvedor"
+              options={[
+                { value: "none", label: "Sem desenvolvedor" },
+                ...developers.map((d) => ({ value: d.id, label: d.name })),
+              ]}
+              selected={developerFilter}
+              onApply={setDeveloperFilter}
+            />
           )}
 
           {clients.length > 0 && (
-            <Select
-              value={clientFilter}
-              onChange={(e) => setClientFilter(e.target.value)}
-              className="w-56"
-              aria-label="Filtrar por cliente"
-            >
-              <option value="all">Todos os clientes</option>
-              <option value="none">Sem cliente</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </Select>
+            <FilterChip
+              label="Cliente"
+              options={[
+                { value: "none", label: "Sem cliente" },
+                ...clients.map((c) => ({ value: c.id, label: c.name })),
+              ]}
+              selected={clientFilter}
+              onApply={setClientFilter}
+            />
           )}
 
           <div className="flex items-center gap-1.5">

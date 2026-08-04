@@ -13,7 +13,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Column } from "@/components/board/column";
@@ -22,7 +22,10 @@ import { CreateTicketDialog } from "@/components/board/create-ticket-dialog";
 import { TicketDetailDialog } from "@/components/board/ticket-detail-dialog";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
-import type { BoardFilters } from "@/lib/board/layout-preferences";
+import {
+  DEFAULT_BOARD_FILTERS,
+  type BoardFilters,
+} from "@/lib/board/layout-preferences";
 import type { Tables } from "@/types/database.types";
 
 export function KanbanBoard({
@@ -203,6 +206,27 @@ export function KanbanBoard({
     createdTo,
   ]);
 
+  const hasActiveFilters =
+    statusFilter !== DEFAULT_BOARD_FILTERS.statusFilter ||
+    sprintFilter !== DEFAULT_BOARD_FILTERS.sprintFilter ||
+    developerFilter !== DEFAULT_BOARD_FILTERS.developerFilter ||
+    clientFilter !== DEFAULT_BOARD_FILTERS.clientFilter ||
+    onlyMine !== DEFAULT_BOARD_FILTERS.onlyMine ||
+    searchQuery.trim() !== "" ||
+    createdFrom !== "" ||
+    createdTo !== "";
+
+  function handleClearFilters() {
+    setStatusFilter(DEFAULT_BOARD_FILTERS.statusFilter);
+    setSprintFilter(DEFAULT_BOARD_FILTERS.sprintFilter);
+    setDeveloperFilter(DEFAULT_BOARD_FILTERS.developerFilter);
+    setClientFilter(DEFAULT_BOARD_FILTERS.clientFilter);
+    setOnlyMine(DEFAULT_BOARD_FILTERS.onlyMine);
+    setSearchQuery(DEFAULT_BOARD_FILTERS.searchQuery);
+    setCreatedFrom(DEFAULT_BOARD_FILTERS.createdFrom);
+    setCreatedTo(DEFAULT_BOARD_FILTERS.createdTo);
+  }
+
   const visibleStatuses = useMemo(
     () =>
       statusFilter === "all"
@@ -263,11 +287,28 @@ export function KanbanBoard({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 px-6 pt-4">
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          {visibleTickets.length}{" "}
-          {visibleTickets.length === 1 ? "chamado" : "chamados"}
-        </p>
+      <div className="mb-4 space-y-3 px-6 pt-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {visibleTickets.length}{" "}
+            {visibleTickets.length === 1 ? "chamado" : "chamados"}
+          </p>
+
+          <button
+            type="button"
+            onClick={handleClearFilters}
+            disabled={!hasActiveFilters}
+            className={clsx(
+              "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors",
+              hasActiveFilters
+                ? "text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/40"
+                : "cursor-not-allowed text-slate-300 dark:text-slate-700"
+            )}
+          >
+            <X className="h-3.5 w-3.5" aria-hidden />
+            Limpar filtros
+          </button>
+        </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative">
@@ -364,12 +405,15 @@ export function KanbanBoard({
           )}
 
           <div className="flex items-center gap-1.5">
+            <span className="text-sm text-slate-500 dark:text-slate-400">
+              Cadastrado:
+            </span>
             <Input
               type="date"
               value={createdFrom}
               onChange={(e) => setCreatedFrom(e.target.value)}
               aria-label="Cadastrado a partir de"
-              className="w-40"
+              className="w-36"
             />
             <span className="text-sm text-slate-400 dark:text-slate-500">até</span>
             <Input
@@ -377,7 +421,7 @@ export function KanbanBoard({
               value={createdTo}
               onChange={(e) => setCreatedTo(e.target.value)}
               aria-label="Cadastrado até"
-              className="w-40"
+              className="w-36"
             />
           </div>
         </div>

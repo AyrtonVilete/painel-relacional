@@ -1,5 +1,5 @@
 import { forwardRef, type SelectHTMLAttributes } from "react";
-import { clsx } from "clsx";
+import { cn } from "@/lib/utils/cn";
 
 export const Select = forwardRef<
   HTMLSelectElement,
@@ -8,7 +8,7 @@ export const Select = forwardRef<
   return (
     <select
       ref={ref}
-      className={clsx(
+      className={cn(
         "w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-[15px] text-slate-900",
         "transition-shadow duration-150",
         "focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/15",

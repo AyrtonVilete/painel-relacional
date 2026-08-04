@@ -1,5 +1,5 @@
 import { type LabelHTMLAttributes } from "react";
-import { clsx } from "clsx";
+import { cn } from "@/lib/utils/cn";
 
 export function Label({
   className,
@@ -7,7 +7,7 @@ export function Label({
 }: LabelHTMLAttributes<HTMLLabelElement>) {
   return (
     <label
-      className={clsx(
+      className={cn(
         "mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300",
         className
       )}

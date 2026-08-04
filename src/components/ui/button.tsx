@@ -1,5 +1,5 @@
 import { forwardRef, type ButtonHTMLAttributes } from "react";
-import { clsx } from "clsx";
+import { cn } from "@/lib/utils/cn";
 import { Loader2 } from "lucide-react";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -15,7 +15,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     <button
       ref={ref}
       disabled={disabled || isLoading}
-      className={clsx(
+      className={cn(
         "inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium",
         "transition-all duration-150 active:scale-[0.98]",
         "focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/25",

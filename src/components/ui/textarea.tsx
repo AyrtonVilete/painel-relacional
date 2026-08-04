@@ -1,5 +1,5 @@
 import { forwardRef, type TextareaHTMLAttributes } from "react";
-import { clsx } from "clsx";
+import { cn } from "@/lib/utils/cn";
 
 export const Textarea = forwardRef<
   HTMLTextAreaElement,
@@ -8,7 +8,7 @@ export const Textarea = forwardRef<
   return (
     <textarea
       ref={ref}
-      className={clsx(
+      className={cn(
         "w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-[15px] text-slate-900",
         "placeholder:text-slate-400",
         "transition-shadow duration-150",

@@ -61,8 +61,11 @@ export function KanbanBoard({
   const [developerFilter, setDeveloperFilter] = useState(
     initialFilters.developerFilter
   );
+  const [clientFilter, setClientFilter] = useState(initialFilters.clientFilter);
   const [onlyMine, setOnlyMine] = useState(initialFilters.onlyMine);
   const [searchQuery, setSearchQuery] = useState(initialFilters.searchQuery);
+  const [createdFrom, setCreatedFrom] = useState(initialFilters.createdFrom);
+  const [createdTo, setCreatedTo] = useState(initialFilters.createdTo);
   const [activeTicket, setActiveTicket] = useState<Tables<"tickets"> | null>(
     null
   );
@@ -100,8 +103,11 @@ export function KanbanBoard({
               statusFilter,
               sprintFilter,
               developerFilter,
+              clientFilter,
               onlyMine,
               searchQuery,
+              createdFrom,
+              createdTo,
             },
           },
           { onConflict: "user_id,board_id" }
@@ -116,8 +122,11 @@ export function KanbanBoard({
     statusFilter,
     sprintFilter,
     developerFilter,
+    clientFilter,
     onlyMine,
     searchQuery,
+    createdFrom,
+    createdTo,
   ]);
 
   const clientsById = useMemo(
@@ -153,8 +162,21 @@ export function KanbanBoard({
       result = result.filter((t) => t.developer_id === developerFilter);
     }
 
+    if (clientFilter === "none") {
+      result = result.filter((t) => !t.client_id);
+    } else if (clientFilter !== "all") {
+      result = result.filter((t) => t.client_id === clientFilter);
+    }
+
     if (onlyMine) {
       result = result.filter((t) => t.created_by === currentUserId);
+    }
+
+    if (createdFrom) {
+      result = result.filter((t) => t.created_at.slice(0, 10) >= createdFrom);
+    }
+    if (createdTo) {
+      result = result.filter((t) => t.created_at.slice(0, 10) <= createdTo);
     }
 
     const query = searchQuery.trim().toLowerCase();
@@ -173,9 +195,12 @@ export function KanbanBoard({
     sprintFilter,
     statusFilter,
     developerFilter,
+    clientFilter,
     onlyMine,
     currentUserId,
     searchQuery,
+    createdFrom,
+    createdTo,
   ]);
 
   const visibleStatuses = useMemo(
@@ -320,6 +345,41 @@ export function KanbanBoard({
               ))}
             </Select>
           )}
+
+          {clients.length > 0 && (
+            <Select
+              value={clientFilter}
+              onChange={(e) => setClientFilter(e.target.value)}
+              className="w-56"
+              aria-label="Filtrar por cliente"
+            >
+              <option value="all">Todos os clientes</option>
+              <option value="none">Sem cliente</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+          )}
+
+          <div className="flex items-center gap-1.5">
+            <Input
+              type="date"
+              value={createdFrom}
+              onChange={(e) => setCreatedFrom(e.target.value)}
+              aria-label="Cadastrado a partir de"
+              className="w-40"
+            />
+            <span className="text-sm text-slate-400 dark:text-slate-500">até</span>
+            <Input
+              type="date"
+              value={createdTo}
+              onChange={(e) => setCreatedTo(e.target.value)}
+              aria-label="Cadastrado até"
+              className="w-40"
+            />
+          </div>
         </div>
       </div>
 

@@ -4,16 +4,22 @@ export type BoardFilters = {
   statusFilter: string;
   sprintFilter: string;
   developerFilter: string;
+  clientFilter: string;
   onlyMine: boolean;
   searchQuery: string;
+  createdFrom: string;
+  createdTo: string;
 };
 
 export const DEFAULT_BOARD_FILTERS: BoardFilters = {
   statusFilter: "all",
   sprintFilter: "all",
   developerFilter: "all",
+  clientFilter: "all",
   onlyMine: false,
   searchQuery: "",
+  createdFrom: "",
+  createdTo: "",
 };
 
 export function parseBoardFilters(json: unknown): BoardFilters {
@@ -33,6 +39,10 @@ export function parseBoardFilters(json: unknown): BoardFilters {
       typeof raw.developerFilter === "string"
         ? raw.developerFilter
         : DEFAULT_BOARD_FILTERS.developerFilter,
+    clientFilter:
+      typeof raw.clientFilter === "string"
+        ? raw.clientFilter
+        : DEFAULT_BOARD_FILTERS.clientFilter,
     onlyMine:
       typeof raw.onlyMine === "boolean"
         ? raw.onlyMine
@@ -41,5 +51,13 @@ export function parseBoardFilters(json: unknown): BoardFilters {
       typeof raw.searchQuery === "string"
         ? raw.searchQuery
         : DEFAULT_BOARD_FILTERS.searchQuery,
+    createdFrom:
+      typeof raw.createdFrom === "string"
+        ? raw.createdFrom
+        : DEFAULT_BOARD_FILTERS.createdFrom,
+    createdTo:
+      typeof raw.createdTo === "string"
+        ? raw.createdTo
+        : DEFAULT_BOARD_FILTERS.createdTo,
   };
 }

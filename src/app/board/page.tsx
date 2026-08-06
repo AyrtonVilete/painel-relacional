@@ -109,7 +109,7 @@ export default async function BoardPage() {
         active="board"
       />
 
-      <div className="mx-auto flex w-full max-w-[100rem] flex-1 overflow-hidden">
+      <div className="mx-auto flex w-full min-w-0 max-w-[100rem] flex-1 overflow-hidden">
         {statusesError || ticketsError ? (
           <div className="flex flex-1 items-center justify-center px-6 text-center">
             <p className="text-sm text-red-600 dark:text-red-400">

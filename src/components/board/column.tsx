@@ -14,6 +14,9 @@ export function Column({
   developersById,
   onAddTicket,
   onSelectTicket,
+  selectionMode = false,
+  selectedTicketIds,
+  onToggleSelect,
 }: {
   status: Tables<"statuses">;
   tickets: Tables<"tickets">[];
@@ -22,7 +25,11 @@ export function Column({
   developersById: Map<string, string>;
   onAddTicket: () => void;
   onSelectTicket: (ticket: Tables<"tickets">) => void;
+  selectionMode?: boolean;
+  selectedTicketIds?: Set<string>;
+  onToggleSelect?: (ticketId: string) => void;
 }) {
+  const isTerminal = status.is_terminal;
   const { setNodeRef, isOver } = useDroppable({ id: status.id });
 
   return (
@@ -49,7 +56,7 @@ export function Column({
       <div
         ref={setNodeRef}
         className={clsx(
-          "min-h-0 flex-1 space-y-2 overflow-y-auto rounded-b-xl px-3 pb-3 transition-colors",
+          "column-scroll-list min-h-0 flex-1 space-y-2 overflow-y-auto rounded-b-xl px-3 pb-3 transition-colors",
           isOver && "bg-indigo-50 dark:bg-indigo-950/30"
         )}
         style={{ minHeight: 140 }}
@@ -71,6 +78,10 @@ export function Column({
                 ? developersById.get(ticket.developer_id) ?? null
                 : null
             }
+            isTerminal={isTerminal}
+            selectionMode={selectionMode}
+            isSelected={selectedTicketIds?.has(ticket.id) ?? false}
+            onToggleSelect={() => onToggleSelect?.(ticket.id)}
             onClick={() => onSelectTicket(ticket)}
           />
         ))}

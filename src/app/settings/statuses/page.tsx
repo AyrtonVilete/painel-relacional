@@ -26,7 +26,7 @@ export default async function StatusesPage() {
   const { data: statuses } = board
     ? await supabase
         .from("statuses")
-        .select("id, name, is_terminal")
+        .select("id, name, is_terminal, is_denied")
         .eq("board_id", board.id)
         .order("order", { ascending: true })
     : { data: [] };
@@ -43,7 +43,9 @@ export default async function StatusesPage() {
           As colunas do quadro — crie, renomeie, reordene ou exclua conforme o
           fluxo de trabalho da sua equipe. Marque quais representam um
           chamado concluído (usado para calcular tempo de resolução e
-          throughput no dashboard).
+          throughput no dashboard) e, se quiser, marque uma coluna como
+          &ldquo;coluna de negados&rdquo; para poder usar o botão
+          &ldquo;Negar&rdquo; nos chamados.
         </p>
       </div>
 
@@ -56,8 +58,8 @@ export default async function StatusesPage() {
       </div>
 
       {safeStatuses.length > 0 ? (
-        <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+          <table className="w-full min-w-[640px] text-sm">
             <tbody className="divide-y divide-slate-200 bg-white dark:divide-slate-800 dark:bg-slate-900">
               {safeStatuses.map((status, index) => (
                 <StatusRow

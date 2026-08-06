@@ -15,8 +15,10 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
+  Timer,
   TicketIcon,
   UserX,
+  XCircle,
   type LucideIcon,
 } from "lucide-react";
 
@@ -101,6 +103,8 @@ export function DashboardCharts({
   totalTickets,
   pendingApproval,
   overdue,
+  slaBreached,
+  denied,
   unassigned,
   avgResolutionDays,
   byStatus,
@@ -112,6 +116,8 @@ export function DashboardCharts({
   totalTickets: number;
   pendingApproval: number;
   overdue: number;
+  slaBreached: number;
+  denied: number;
   unassigned: number;
   avgResolutionDays: number | null;
   byStatus: CountDatum[];
@@ -126,7 +132,7 @@ export function DashboardCharts({
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-7">
         <StatTile label="Total de chamados" value={totalTickets} icon={TicketIcon} />
         <StatTile
           label="Pendentes de aprovação"
@@ -140,6 +146,13 @@ export function DashboardCharts({
           icon={AlertTriangle}
           tone="critical"
         />
+        <StatTile
+          label="SLA estourado"
+          value={slaBreached}
+          icon={Timer}
+          tone="critical"
+        />
+        <StatTile label="Negados" value={denied} icon={XCircle} tone="warning" />
         <StatTile
           label="Sem desenvolvedor"
           value={unassigned}

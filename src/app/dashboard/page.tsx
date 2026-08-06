@@ -43,13 +43,13 @@ export default async function DashboardPage() {
     await Promise.all([
       supabase
         .from("statuses")
-        .select("id, name, is_terminal")
+        .select("id, name, is_terminal, is_denied")
         .eq("board_id", board.id)
         .order("order", { ascending: true }),
       supabase
         .from("tickets")
         .select(
-          "id, status_id, urgency, approved, deadline, sprint_id, developer_id, created_at"
+          "id, status_id, urgency, approved, deadline, sla_due_at, sprint_id, developer_id, created_at"
         )
         .eq("board_id", board.id),
       supabase
@@ -71,6 +71,9 @@ export default async function DashboardPage() {
 
   const terminalStatusIds = new Set(
     safeStatuses.filter((s) => s.is_terminal).map((s) => s.id)
+  );
+  const deniedStatusIds = new Set(
+    safeStatuses.filter((s) => s.is_denied).map((s) => s.id)
   );
 
   const ticketIds = safeTickets.map((t) => t.id);
@@ -151,6 +154,16 @@ export default async function DashboardPage() {
     (t) => t.deadline !== null && t.deadline < today
   ).length;
   const unassigned = safeTickets.filter((t) => !t.developer_id).length;
+  // Distinct from "overdue" above (that's the manual, client-facing
+  // `deadline`) — this counts the automatic per-urgency SLA target from
+  // /settings/sla, excluding tickets already in a terminal status.
+  const slaBreached = safeTickets.filter(
+    (t) =>
+      t.sla_due_at !== null &&
+      !terminalStatusIds.has(t.status_id) &&
+      new Date(t.sla_due_at) < now
+  ).length;
+  const denied = safeTickets.filter((t) => deniedStatusIds.has(t.status_id)).length;
 
   const byStatus = safeStatuses.map((s) => ({
     name: s.name,
@@ -198,6 +211,8 @@ export default async function DashboardPage() {
           totalTickets={totalTickets}
           pendingApproval={pendingApproval}
           overdue={overdue}
+          slaBreached={slaBreached}
+          denied={denied}
           unassigned={unassigned}
           avgResolutionDays={avgResolutionDays}
           byStatus={byStatus}

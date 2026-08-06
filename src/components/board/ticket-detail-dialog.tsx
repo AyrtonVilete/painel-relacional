@@ -7,7 +7,7 @@ import {
   type ChangeEvent,
   type FormEvent,
 } from "react";
-import { CheckCircle2, Paperclip, Trash2 } from "lucide-react";
+import { CheckCircle2, Paperclip, Trash2, XCircle } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,6 +69,7 @@ export function TicketDetailDialog({
 }) {
   const [isSaving, setIsSaving] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  const [isDenying, setIsDenying] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryRow[] | null>(null);
@@ -86,6 +87,14 @@ export function TicketDetailDialog({
 
   const statusesById = useMemo(
     () => new Map(statuses.map((s) => [s.id, s.name])),
+    [statuses]
+  );
+  // Set by an admin in /settings/statuses ("coluna de negados") — no status
+  // is force-created for any org, so this can legitimately be undefined
+  // until one is configured, in which case the Negar button just doesn't
+  // render (nothing sensible to route the ticket to yet).
+  const deniedStatus = useMemo(
+    () => statuses.find((s) => s.is_denied),
     [statuses]
   );
   const sprintsById = useMemo(
@@ -360,6 +369,30 @@ export function TicketDetailDialog({
     onUpdated(data);
   }
 
+  // Routed through move_ticket (not a plain .update()) so ticket_history
+  // logs the move like any other status change — same reason drag-and-drop
+  // and the bulk-actions bar use it instead of updating status_id directly.
+  // Deliberately doesn't touch `approved`: denying is a distinct outcome
+  // from approval, not the same field's negative case.
+  async function handleDeny() {
+    if (!deniedStatus) return;
+
+    setIsDenying(true);
+    const supabase = createClient();
+    const { error: denyError } = await supabase.rpc("move_ticket", {
+      p_ticket_id: ticket.id,
+      p_new_status_id: deniedStatus.id,
+    });
+    setIsDenying(false);
+
+    if (denyError) {
+      setError("Não foi possível negar o chamado");
+      return;
+    }
+
+    onUpdated({ ...ticket, status_id: deniedStatus.id });
+  }
+
   async function handleDelete() {
     if (!window.confirm("Excluir este chamado? Essa ação não pode ser desfeita.")) {
       return;
@@ -417,6 +450,18 @@ export function TicketDetailDialog({
                 Aprovar
               </Button>
             )}
+            {canApprove && deniedStatus && ticket.status_id !== deniedStatus.id && (
+              <Button
+                type="button"
+                variant="secondary"
+                isLoading={isDenying}
+                onClick={handleDeny}
+                className="border-red-300 text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
+              >
+                <XCircle className="h-4 w-4" aria-hidden />
+                Negar
+              </Button>
+            )}
             {isAdmin && (
               <button
                 type="button"
@@ -471,7 +516,19 @@ export function TicketDetailDialog({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label htmlFor="statusId">Status</Label>
-            <Select id="statusId" name="statusId" defaultValue={ticket.status_id}>
+            {/* Uncontrolled field (defaultValue) — key resets it when
+                status_id changes without the dialog closing, which
+                otherwise only happens via handleSubmit (closes right
+                after) or handleApprove (never changes status_id). Negar
+                is the first action that changes status_id and keeps the
+                dialog open, so without this the select would keep
+                showing the pre-Negar status. */}
+            <Select
+              key={ticket.status_id}
+              id="statusId"
+              name="statusId"
+              defaultValue={ticket.status_id}
+            >
               {statuses.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}

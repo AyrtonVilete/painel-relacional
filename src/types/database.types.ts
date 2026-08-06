@@ -105,6 +105,218 @@ export type Database = {
           },
         ]
       }
+      fin_categories: {
+        Row: {
+          color: string
+          created_at: string
+          icon: string
+          id: string
+          kind: Database["public"]["Enums"]["fin_category_kind"]
+          name: string
+          user_id: string | null
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["fin_category_kind"]
+          name: string
+          user_id?: string | null
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["fin_category_kind"]
+          name?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      fin_household_members: {
+        Row: {
+          household_id: string
+          joined_at: string
+          user_id: string
+        }
+        Insert: {
+          household_id: string
+          joined_at?: string
+          user_id: string
+        }
+        Update: {
+          household_id?: string
+          joined_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_household_members_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "fin_households"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_household_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "fin_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_households: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          invite_code: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          invite_code?: string
+          name?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          invite_code?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      fin_profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          monthly_surplus: number | null
+          risk_profile: Database["public"]["Enums"]["fin_risk_profile"] | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          monthly_surplus?: number | null
+          risk_profile?: Database["public"]["Enums"]["fin_risk_profile"] | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          monthly_surplus?: number | null
+          risk_profile?: Database["public"]["Enums"]["fin_risk_profile"] | null
+        }
+        Relationships: []
+      }
+      fin_transaction_items: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          quantity: number
+          transaction_id: string
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          quantity?: number
+          transaction_id: string
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          quantity?: number
+          transaction_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_transaction_items_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "fin_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fin_transactions: {
+        Row: {
+          amount: number
+          category_id: string | null
+          created_at: string
+          description: string | null
+          household_id: string | null
+          id: string
+          installment_group_id: string | null
+          installment_number: number | null
+          installment_total: number | null
+          is_shared: boolean
+          kind: Database["public"]["Enums"]["fin_transaction_kind"]
+          occurred_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          household_id?: string | null
+          id?: string
+          installment_group_id?: string | null
+          installment_number?: number | null
+          installment_total?: number | null
+          is_shared?: boolean
+          kind?: Database["public"]["Enums"]["fin_transaction_kind"]
+          occurred_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          household_id?: string | null
+          id?: string
+          installment_group_id?: string | null
+          installment_number?: number | null
+          installment_total?: number | null
+          is_shared?: boolean
+          kind?: Database["public"]["Enums"]["fin_transaction_kind"]
+          occurred_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_transactions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "fin_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_transactions_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "fin_households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       layout_preferences: {
         Row: {
           board_id: string
@@ -249,6 +461,35 @@ export type Database = {
         }
         Relationships: []
       }
+      sla_policies: {
+        Row: {
+          duration_hours: number
+          id: string
+          organization_id: string
+          urgency: Database["public"]["Enums"]["ticket_urgency"]
+        }
+        Insert: {
+          duration_hours: number
+          id?: string
+          organization_id: string
+          urgency: Database["public"]["Enums"]["ticket_urgency"]
+        }
+        Update: {
+          duration_hours?: number
+          id?: string
+          organization_id?: string
+          urgency?: Database["public"]["Enums"]["ticket_urgency"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sla_policies_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sprints: {
         Row: {
           board_id: string
@@ -289,6 +530,7 @@ export type Database = {
           board_id: string
           created_at: string
           id: string
+          is_denied: boolean
           is_terminal: boolean
           name: string
           order: number
@@ -297,6 +539,7 @@ export type Database = {
           board_id: string
           created_at?: string
           id?: string
+          is_denied?: boolean
           is_terminal?: boolean
           name: string
           order?: number
@@ -305,6 +548,7 @@ export type Database = {
           board_id?: string
           created_at?: string
           id?: string
+          is_denied?: boolean
           is_terminal?: boolean
           name?: string
           order?: number
@@ -502,6 +746,7 @@ export type Database = {
           developer_id: string | null
           id: string
           organization_id: string
+          sla_due_at: string | null
           sprint_id: string | null
           status_id: string
           ticket_number: number
@@ -520,6 +765,7 @@ export type Database = {
           developer_id?: string | null
           id?: string
           organization_id: string
+          sla_due_at?: string | null
           sprint_id?: string | null
           status_id: string
           ticket_number: number
@@ -538,6 +784,7 @@ export type Database = {
           developer_id?: string | null
           id?: string
           organization_id?: string
+          sla_due_at?: string | null
           sprint_id?: string | null
           status_id?: string
           ticket_number?: number
@@ -607,6 +854,8 @@ export type Database = {
         Args: { org_name: string; org_slug: string }
         Returns: string
       }
+      fin_join_household: { Args: { p_invite_code: string }; Returns: string }
+      fin_my_household_ids: { Args: never; Returns: string[] }
       is_org_admin: { Args: { org_id: string }; Returns: boolean }
       is_org_admin_or_approver: { Args: { org_id: string }; Returns: boolean }
       is_org_member: { Args: { org_id: string }; Returns: boolean }
@@ -622,6 +871,9 @@ export type Database = {
       ticket_org_id: { Args: { p_ticket_id: string }; Returns: string }
     }
     Enums: {
+      fin_category_kind: "expense" | "income"
+      fin_risk_profile: "conservador" | "moderado" | "arrojado"
+      fin_transaction_kind: "expense" | "income"
       membership_role: "admin" | "approver" | "member"
       ticket_urgency: "low" | "medium" | "high" | "critical"
     }
@@ -751,6 +1003,9 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      fin_category_kind: ["expense", "income"],
+      fin_risk_profile: ["conservador", "moderado", "arrojado"],
+      fin_transaction_kind: ["expense", "income"],
       membership_role: ["admin", "approver", "member"],
       ticket_urgency: ["low", "medium", "high", "critical"],
     },

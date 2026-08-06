@@ -21,3 +21,35 @@ body {
     text-wrap: balance;
   }
 }
+
+/* Visible horizontal scrollbar for the board's column row — the default
+   browser scrollbar was either invisible or easy to miss, which combined
+   with mouse wheels not natively scrolling horizontally made columns past
+   the visible width feel unreachable rather than just off-screen. */
+.board-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(203 213 225) transparent;
+}
+.board-scroll::-webkit-scrollbar {
+  height: 10px;
+}
+.board-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.board-scroll::-webkit-scrollbar-thumb {
+  background-color: rgb(203 213 225);
+  border-radius: 9999px;
+}
+.board-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(148 163 184);
+}
+
+:root.dark .board-scroll {
+  scrollbar-color: rgb(71 85 105) transparent;
+}
+:root.dark .board-scroll::-webkit-scrollbar-thumb {
+  background-color: rgb(71 85 105);
+}
+:root.dark .board-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(100 116 139);
+}

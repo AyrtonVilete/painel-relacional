@@ -17,6 +17,14 @@ export async function updateStatusTerminal(id: string, isTerminal: boolean) {
   revalidatePath("/dashboard");
 }
 
+export async function updateStatusDenied(id: string, isDenied: boolean) {
+  const supabase = await createClient();
+  await supabase.from("statuses").update({ is_denied: isDenied }).eq("id", id);
+  revalidatePath("/settings/statuses");
+  revalidatePath("/board");
+  revalidatePath("/dashboard");
+}
+
 export async function createStatus(
   _prevState: ActionState,
   formData: FormData

@@ -317,6 +317,35 @@ export type Database = {
           },
         ]
       }
+      followup_policies: {
+        Row: {
+          id: string
+          interval_hours: number
+          organization_id: string
+          urgency: Database["public"]["Enums"]["ticket_urgency"]
+        }
+        Insert: {
+          id?: string
+          interval_hours: number
+          organization_id: string
+          urgency: Database["public"]["Enums"]["ticket_urgency"]
+        }
+        Update: {
+          id?: string
+          interval_hours?: number
+          organization_id?: string
+          urgency?: Database["public"]["Enums"]["ticket_urgency"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sla_policies_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       layout_preferences: {
         Row: {
           board_id: string
@@ -460,35 +489,6 @@ export type Database = {
           id?: string
         }
         Relationships: []
-      }
-      sla_policies: {
-        Row: {
-          duration_hours: number
-          id: string
-          organization_id: string
-          urgency: Database["public"]["Enums"]["ticket_urgency"]
-        }
-        Insert: {
-          duration_hours: number
-          id?: string
-          organization_id: string
-          urgency: Database["public"]["Enums"]["ticket_urgency"]
-        }
-        Update: {
-          duration_hours?: number
-          id?: string
-          organization_id?: string
-          urgency?: Database["public"]["Enums"]["ticket_urgency"]
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sla_policies_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       sprints: {
         Row: {
@@ -744,9 +744,11 @@ export type Database = {
           deadline: string | null
           description: string | null
           developer_id: string | null
+          execution_deadline: string | null
           id: string
+          last_followup_at: string | null
+          next_followup_due: string | null
           organization_id: string
-          sla_due_at: string | null
           sprint_id: string | null
           status_id: string
           ticket_number: number
@@ -763,9 +765,11 @@ export type Database = {
           deadline?: string | null
           description?: string | null
           developer_id?: string | null
+          execution_deadline?: string | null
           id?: string
+          last_followup_at?: string | null
+          next_followup_due?: string | null
           organization_id: string
-          sla_due_at?: string | null
           sprint_id?: string | null
           status_id: string
           ticket_number: number
@@ -782,9 +786,11 @@ export type Database = {
           deadline?: string | null
           description?: string | null
           developer_id?: string | null
+          execution_deadline?: string | null
           id?: string
+          last_followup_at?: string | null
+          next_followup_due?: string | null
           organization_id?: string
-          sla_due_at?: string | null
           sprint_id?: string | null
           status_id?: string
           ticket_number?: number

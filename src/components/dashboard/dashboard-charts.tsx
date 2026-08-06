@@ -13,9 +13,9 @@ import {
 } from "recharts";
 import {
   AlertTriangle,
+  Bell,
   CheckCircle2,
   Clock,
-  Timer,
   TicketIcon,
   UserX,
   XCircle,
@@ -103,7 +103,7 @@ export function DashboardCharts({
   totalTickets,
   pendingApproval,
   overdue,
-  slaBreached,
+  followupPending,
   denied,
   unassigned,
   avgResolutionDays,
@@ -116,7 +116,7 @@ export function DashboardCharts({
   totalTickets: number;
   pendingApproval: number;
   overdue: number;
-  slaBreached: number;
+  followupPending: number;
   denied: number;
   unassigned: number;
   avgResolutionDays: number | null;
@@ -147,9 +147,9 @@ export function DashboardCharts({
           tone="critical"
         />
         <StatTile
-          label="SLA estourado"
-          value={slaBreached}
-          icon={Timer}
+          label="Cobrança pendente"
+          value={followupPending}
+          icon={Bell}
           tone="critical"
         />
         <StatTile label="Negados" value={denied} icon={XCircle} tone="warning" />

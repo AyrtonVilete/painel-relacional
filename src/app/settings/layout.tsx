@@ -7,7 +7,7 @@ import {
   CalendarRange,
   Code2,
   ListChecks,
-  Timer,
+  Bell,
   ArrowLeft,
 } from "lucide-react";
 import { getCurrentMembership } from "@/lib/org/get-current-membership";
@@ -23,7 +23,7 @@ const NAV_ITEMS = [
   { href: "/settings/developers", label: "Desenvolvedores", icon: Code2 },
   { href: "/settings/sprints", label: "Sprints", icon: CalendarRange },
   { href: "/settings/statuses", label: "Status", icon: ListChecks },
-  { href: "/settings/sla", label: "SLA", icon: Timer },
+  { href: "/settings/followup", label: "Cobrança", icon: Bell },
 ];
 
 export default async function SettingsLayout({

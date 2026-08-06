@@ -1,7 +1,6 @@
 "use client";
 
 import { useDraggable } from "@dnd-kit/core";
-import { useEffect, useState } from "react";
 import { clsx } from "clsx";
 import { AlertTriangle } from "lucide-react";
 import { UrgencyBadge } from "@/components/board/urgency-badge";
@@ -27,51 +26,64 @@ function getDeadlineStatus(deadline: string): "overdue" | "soon" | "normal" {
   return "normal";
 }
 
-const SLA_TICK_MS = 60_000;
-const SLA_SOON_THRESHOLD_MS = 4 * 60 * 60 * 1000;
-
-function formatSlaRemaining(ms: number) {
-  const totalMinutes = Math.floor(Math.abs(ms) / 60_000);
-  const days = Math.floor(totalMinutes / (60 * 24));
-  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
-  const minutes = totalMinutes % 60;
-
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}min`;
-  return `${minutes}min`;
+// Shared render for the two manual date fields (Prazo pre-approval,
+// Execução prevista post-approval) — same day-based thresholds/coloring,
+// just a different field and label depending on approval state.
+function DateBadge({ label, date }: { label: string; date: string }) {
+  const status = getDeadlineStatus(date);
+  return (
+    <p
+      className={clsx(
+        "mt-1 flex items-center gap-1 text-xs",
+        status === "overdue"
+          ? "font-medium text-red-600 dark:text-red-400"
+          : status === "soon"
+            ? "font-medium text-amber-600 dark:text-amber-400"
+            : "text-slate-400 dark:text-slate-500"
+      )}
+    >
+      {status === "overdue" && <AlertTriangle className="h-3 w-3" aria-hidden />}
+      {label}: {formatDate(date)}
+    </p>
+  );
 }
 
-// Separate concept from the deadline badge above: sla_due_at is an
-// automatic internal target computed from urgency (see /settings/sla),
-// not the manual client-facing deadline. Ticks every 60s so "vence em Xh"
-// stays roughly current without re-rendering every second.
-function SlaBadge({ slaDueAt }: { slaDueAt: string }) {
-  const [now, setNow] = useState(() => Date.now());
+function formatFollowupRelative(nextFollowupDue: string) {
+  const daysDiff = Math.round(
+    (new Date(nextFollowupDue).getTime() - Date.now()) / ONE_DAY_MS
+  );
+  if (daysDiff < 0) {
+    const overdueDays = Math.abs(daysDiff);
+    return `atrasada há ${overdueDays} ${overdueDays === 1 ? "dia" : "dias"}`;
+  }
+  if (daysDiff === 0) return "hoje";
+  return `em ${daysDiff} ${daysDiff === 1 ? "dia" : "dias"}`;
+}
 
-  useEffect(() => {
-    const interval = setInterval(() => setNow(Date.now()), SLA_TICK_MS);
-    return () => clearInterval(interval);
-  }, []);
-
-  const remainingMs = new Date(slaDueAt).getTime() - now;
-  const isBreached = remainingMs < 0;
-  const isSoon = !isBreached && remainingMs <= SLA_SOON_THRESHOLD_MS;
+// Recurring check-in reminder (see /settings/followup) — distinct from the
+// Prazo/Execução prevista dates above, which are one-shot targets. Day
+// granularity (unlike the old hour-based SLA badge this replaced) since
+// intervals here run from days to months, not hours.
+function FollowupBadge({ nextFollowupDue }: { nextFollowupDue: string }) {
+  const daysDiff = Math.round(
+    (new Date(nextFollowupDue).getTime() - Date.now()) / ONE_DAY_MS
+  );
+  const isOverdue = daysDiff < 0;
+  const isSoon = !isOverdue && daysDiff <= 2;
 
   return (
     <p
       className={clsx(
         "mt-1 flex items-center gap-1 text-xs",
-        isBreached
+        isOverdue
           ? "font-medium text-red-600 dark:text-red-400"
           : isSoon
             ? "font-medium text-amber-600 dark:text-amber-400"
             : "text-slate-400 dark:text-slate-500"
       )}
     >
-      {isBreached && <AlertTriangle className="h-3 w-3" aria-hidden />}
-      {isBreached
-        ? `SLA estourado há ${formatSlaRemaining(remainingMs)}`
-        : `SLA: vence em ${formatSlaRemaining(remainingMs)}`}
+      {isOverdue && <AlertTriangle className="h-3 w-3" aria-hidden />}
+      Cobrança {formatFollowupRelative(nextFollowupDue)}
     </p>
   );
 }
@@ -82,6 +94,7 @@ export function TicketCard({
   typeName,
   developerName,
   isTerminal,
+  isDenied,
   selectionMode = false,
   isSelected = false,
   onToggleSelect,
@@ -92,6 +105,7 @@ export function TicketCard({
   typeName: string | null;
   developerName: string | null;
   isTerminal: boolean;
+  isDenied: boolean;
   selectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: () => void;
@@ -185,26 +199,16 @@ export function TicketCard({
         </p>
       )}
 
-      {ticket.deadline && (
-        <p
-          className={clsx(
-            "mt-1 flex items-center gap-1 text-xs",
-            getDeadlineStatus(ticket.deadline) === "overdue"
-              ? "font-medium text-red-600 dark:text-red-400"
-              : getDeadlineStatus(ticket.deadline) === "soon"
-                ? "font-medium text-amber-600 dark:text-amber-400"
-                : "text-slate-400 dark:text-slate-500"
-          )}
-        >
-          {getDeadlineStatus(ticket.deadline) === "overdue" && (
-            <AlertTriangle className="h-3 w-3" aria-hidden />
-          )}
-          Prazo: {formatDate(ticket.deadline)}
-        </p>
+      {!ticket.approved && ticket.deadline && (
+        <DateBadge label="Prazo" date={ticket.deadline} />
       )}
 
-      {ticket.sla_due_at && !isTerminal && (
-        <SlaBadge slaDueAt={ticket.sla_due_at} />
+      {ticket.approved && ticket.execution_deadline && (
+        <DateBadge label="Execução prevista" date={ticket.execution_deadline} />
+      )}
+
+      {ticket.next_followup_due && !isTerminal && !isDenied && (
+        <FollowupBadge nextFollowupDue={ticket.next_followup_due} />
       )}
     </div>
   );

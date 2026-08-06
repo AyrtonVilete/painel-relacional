@@ -30,6 +30,7 @@ export function Column({
   onToggleSelect?: (ticketId: string) => void;
 }) {
   const isTerminal = status.is_terminal;
+  const isDenied = status.is_denied;
   const { setNodeRef, isOver } = useDroppable({ id: status.id });
 
   return (
@@ -79,6 +80,7 @@ export function Column({
                 : null
             }
             isTerminal={isTerminal}
+            isDenied={isDenied}
             selectionMode={selectionMode}
             isSelected={selectedTicketIds?.has(ticket.id) ?? false}
             onToggleSelect={() => onToggleSelect?.(ticket.id)}

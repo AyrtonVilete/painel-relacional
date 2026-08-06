@@ -49,7 +49,7 @@ export default async function DashboardPage() {
       supabase
         .from("tickets")
         .select(
-          "id, status_id, urgency, approved, deadline, sla_due_at, sprint_id, developer_id, created_at"
+          "id, status_id, urgency, approved, deadline, execution_deadline, next_followup_due, sprint_id, developer_id, created_at"
         )
         .eq("board_id", board.id),
       supabase
@@ -150,18 +150,26 @@ export default async function DashboardPage() {
 
   const totalTickets = safeTickets.length;
   const pendingApproval = safeTickets.filter((t) => !t.approved).length;
-  const overdue = safeTickets.filter(
-    (t) => t.deadline !== null && t.deadline < today
-  ).length;
+  // Before approval, "overdue" means the approval-meeting target (deadline)
+  // passed; once approved, deadline is moot and execution_deadline is the
+  // relevant target instead. Excludes terminal/denied tickets — a resolved
+  // or rejected ticket isn't meaningfully "atrasado" anymore.
+  const overdue = safeTickets.filter((t) => {
+    if (terminalStatusIds.has(t.status_id) || deniedStatusIds.has(t.status_id)) {
+      return false;
+    }
+    const relevantDate = t.approved ? t.execution_deadline : t.deadline;
+    return relevantDate !== null && relevantDate < today;
+  }).length;
   const unassigned = safeTickets.filter((t) => !t.developer_id).length;
-  // Distinct from "overdue" above (that's the manual, client-facing
-  // `deadline`) — this counts the automatic per-urgency SLA target from
-  // /settings/sla, excluding tickets already in a terminal status.
-  const slaBreached = safeTickets.filter(
+  // Recurring "cobrança de andamento" reminder from /settings/followup —
+  // distinct from "overdue" above (one-shot approval/execution targets).
+  const followupPending = safeTickets.filter(
     (t) =>
-      t.sla_due_at !== null &&
+      t.next_followup_due !== null &&
       !terminalStatusIds.has(t.status_id) &&
-      new Date(t.sla_due_at) < now
+      !deniedStatusIds.has(t.status_id) &&
+      new Date(t.next_followup_due) < now
   ).length;
   const denied = safeTickets.filter((t) => deniedStatusIds.has(t.status_id)).length;
 
@@ -211,7 +219,7 @@ export default async function DashboardPage() {
           totalTickets={totalTickets}
           pendingApproval={pendingApproval}
           overdue={overdue}
-          slaBreached={slaBreached}
+          followupPending={followupPending}
           denied={denied}
           unassigned={unassigned}
           avgResolutionDays={avgResolutionDays}

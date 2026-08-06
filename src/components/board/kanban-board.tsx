@@ -156,6 +156,10 @@ export function KanbanBoard({
     () => new Set(statuses.filter((s) => s.is_terminal).map((s) => s.id)),
     [statuses]
   );
+  const deniedStatusIds = useMemo(
+    () => new Set(statuses.filter((s) => s.is_denied).map((s) => s.id)),
+    [statuses]
+  );
 
   const visibleTickets = useMemo(() => {
     let result = tickets;
@@ -759,6 +763,7 @@ export function KanbanBoard({
                   : null
               }
               isTerminal={terminalStatusIds.has(activeTicket.status_id)}
+              isDenied={deniedStatusIds.has(activeTicket.status_id)}
               onClick={() => {}}
             />
           )}

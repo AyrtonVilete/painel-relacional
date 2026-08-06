@@ -7,7 +7,7 @@ import {
   type ChangeEvent,
   type FormEvent,
 } from "react";
-import { CheckCircle2, Paperclip, Trash2, XCircle } from "lucide-react";
+import { CheckCircle2, Paperclip, Trash2, XCircle, BellRing } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,7 +69,10 @@ export function TicketDetailDialog({
 }) {
   const [isSaving, setIsSaving] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  const [showApproveForm, setShowApproveForm] = useState(false);
+  const [executionDateInput, setExecutionDateInput] = useState("");
   const [isDenying, setIsDenying] = useState(false);
+  const [isMarkingFollowup, setIsMarkingFollowup] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryRow[] | null>(null);
@@ -96,6 +99,10 @@ export function TicketDetailDialog({
   const deniedStatus = useMemo(
     () => statuses.find((s) => s.is_denied),
     [statuses]
+  );
+  const currentStatus = useMemo(
+    () => statuses.find((s) => s.id === ticket.status_id),
+    [statuses, ticket.status_id]
   );
   const sprintsById = useMemo(
     () => new Map(sprints.map((s) => [s.id, s.name])),
@@ -314,6 +321,7 @@ export function TicketDetailDialog({
     const typeValue = String(formData.get("typeId") ?? "");
     const developerValue = String(formData.get("developerId") ?? "");
     const deadlineValue = String(formData.get("deadline") ?? "");
+    const executionDeadlineValue = String(formData.get("executionDeadline") ?? "");
     const description = String(formData.get("description") ?? "").trim();
 
     const { data, error: updateError } = await supabase
@@ -327,6 +335,7 @@ export function TicketDetailDialog({
         type_id: typeValue || null,
         developer_id: developerValue || null,
         deadline: deadlineValue || null,
+        execution_deadline: executionDeadlineValue || null,
         status_id: newStatusId,
         sprint_id: newSprintId,
       })
@@ -349,12 +358,18 @@ export function TicketDetailDialog({
     onClose();
   }
 
+  // Execution deadline is captured right here instead of left as a normal
+  // form field — the whole point is that every approval leaves the ticket
+  // with a known execution target, not a value someone has to remember to
+  // fill in separately afterward.
   async function handleApprove() {
+    if (!executionDateInput) return;
+
     setIsApproving(true);
     const supabase = createClient();
     const { data, error: approveError } = await supabase
       .from("tickets")
-      .update({ approved: true })
+      .update({ approved: true, execution_deadline: executionDateInput })
       .eq("id", ticket.id)
       .select()
       .single();
@@ -363,6 +378,27 @@ export function TicketDetailDialog({
 
     if (approveError || !data) {
       setError("Não foi possível aprovar o chamado");
+      return;
+    }
+
+    setShowApproveForm(false);
+    onUpdated(data);
+  }
+
+  async function handleMarkFollowedUp() {
+    setIsMarkingFollowup(true);
+    const supabase = createClient();
+    const { data, error: followupError } = await supabase
+      .from("tickets")
+      .update({ last_followup_at: new Date().toISOString() })
+      .eq("id", ticket.id)
+      .select()
+      .single();
+
+    setIsMarkingFollowup(false);
+
+    if (followupError || !data) {
+      setError("Não foi possível marcar a cobrança");
       return;
     }
 
@@ -438,13 +474,43 @@ export function TicketDetailDialog({
             </span>
           )}
 
+          {showApproveForm ? (
+            <div className="flex items-center gap-2">
+              <Input
+                type="date"
+                required
+                autoFocus
+                value={executionDateInput}
+                onChange={(e) => setExecutionDateInput(e.target.value)}
+                aria-label="Execução prevista"
+                className="w-40"
+              />
+              <Button
+                type="button"
+                isLoading={isApproving}
+                disabled={!executionDateInput}
+                onClick={handleApprove}
+              >
+                Confirmar aprovação
+              </Button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowApproveForm(false);
+                  setExecutionDateInput("");
+                }}
+                className="text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              >
+                Cancelar
+              </button>
+            </div>
+          ) : (
           <div className="flex items-center gap-2">
             {!ticket.approved && canApprove && (
               <Button
                 type="button"
                 variant="secondary"
-                isLoading={isApproving}
-                onClick={handleApprove}
+                onClick={() => setShowApproveForm(true)}
               >
                 <CheckCircle2 className="h-4 w-4" aria-hidden />
                 Aprovar
@@ -462,6 +528,19 @@ export function TicketDetailDialog({
                 Negar
               </Button>
             )}
+            {ticket.next_followup_due &&
+              !currentStatus?.is_terminal &&
+              !currentStatus?.is_denied && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  isLoading={isMarkingFollowup}
+                  onClick={handleMarkFollowedUp}
+                >
+                  <BellRing className="h-4 w-4" aria-hidden />
+                  Marquei a cobrança
+                </Button>
+              )}
             {isAdmin && (
               <button
                 type="button"
@@ -474,6 +553,7 @@ export function TicketDetailDialog({
               </button>
             )}
           </div>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -555,7 +635,7 @@ export function TicketDetailDialog({
         <div className="grid grid-cols-2 gap-4">
           <SprintSelect sprints={sprints} defaultValue={ticket.sprint_id} />
           <div>
-            <Label htmlFor="deadline">Prazo</Label>
+            <Label htmlFor="deadline">Prazo (previsão de aprovação)</Label>
             <Input
               id="deadline"
               name="deadline"
@@ -565,7 +645,22 @@ export function TicketDetailDialog({
           </div>
         </div>
 
-        <DeveloperSelect developers={developers} defaultValue={ticket.developer_id} />
+        <div className="grid grid-cols-2 gap-4">
+          <DeveloperSelect developers={developers} defaultValue={ticket.developer_id} />
+          <div>
+            <Label htmlFor="executionDeadline">Execução prevista</Label>
+            {/* Same uncontrolled-field staleness issue as the Status select
+                above — handleApprove sets execution_deadline while the
+                dialog stays open, so this needs the same key reset. */}
+            <Input
+              key={ticket.execution_deadline ?? "none"}
+              id="executionDeadline"
+              name="executionDeadline"
+              type="date"
+              defaultValue={ticket.execution_deadline ?? ""}
+            />
+          </div>
+        </div>
 
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>

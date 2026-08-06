@@ -31,6 +31,7 @@ export function Column({
 }) {
   const isTerminal = status.is_terminal;
   const isDenied = status.is_denied;
+  const isAwaitingApproval = status.is_awaiting_approval;
   const { setNodeRef, isOver } = useDroppable({ id: status.id });
 
   return (
@@ -81,6 +82,7 @@ export function Column({
             }
             isTerminal={isTerminal}
             isDenied={isDenied}
+            isAwaitingApproval={isAwaitingApproval}
             selectionMode={selectionMode}
             isSelected={selectedTicketIds?.has(ticket.id) ?? false}
             onToggleSelect={() => onToggleSelect?.(ticket.id)}

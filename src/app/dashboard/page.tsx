@@ -43,7 +43,7 @@ export default async function DashboardPage() {
     await Promise.all([
       supabase
         .from("statuses")
-        .select("id, name, is_terminal, is_denied")
+        .select("id, name, is_terminal, is_denied, is_awaiting_approval")
         .eq("board_id", board.id)
         .order("order", { ascending: true }),
       supabase
@@ -74,6 +74,9 @@ export default async function DashboardPage() {
   );
   const deniedStatusIds = new Set(
     safeStatuses.filter((s) => s.is_denied).map((s) => s.id)
+  );
+  const awaitingApprovalStatusIds = new Set(
+    safeStatuses.filter((s) => s.is_awaiting_approval).map((s) => s.id)
   );
 
   const ticketIds = safeTickets.map((t) => t.id);
@@ -150,15 +153,19 @@ export default async function DashboardPage() {
 
   const totalTickets = safeTickets.length;
   const pendingApproval = safeTickets.filter((t) => !t.approved).length;
-  // Before approval, "overdue" means the approval-meeting target (deadline)
-  // passed; once approved, deadline is moot and execution_deadline is the
-  // relevant target instead. Excludes terminal/denied tickets — a resolved
-  // or rejected ticket isn't meaningfully "atrasado" anymore.
+  // Driven by the ticket's current column, not the `approved` flag — a
+  // ticket dragged straight to "Aprovado" (unrestricted, doesn't require
+  // clicking "Aprovar") should count against execution_deadline right
+  // away, same reasoning as the ticket-card badge. Excludes terminal/
+  // denied tickets — a resolved or rejected ticket isn't meaningfully
+  // "atrasado" anymore.
   const overdue = safeTickets.filter((t) => {
     if (terminalStatusIds.has(t.status_id) || deniedStatusIds.has(t.status_id)) {
       return false;
     }
-    const relevantDate = t.approved ? t.execution_deadline : t.deadline;
+    const relevantDate = awaitingApprovalStatusIds.has(t.status_id)
+      ? t.deadline
+      : t.execution_deadline;
     return relevantDate !== null && relevantDate < today;
   }).length;
   const unassigned = safeTickets.filter((t) => !t.developer_id).length;

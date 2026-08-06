@@ -11,6 +11,7 @@ import {
 } from "@/lib/statuses/actions";
 import { StatusTerminalToggle } from "@/components/settings/status-terminal-toggle";
 import { StatusDeniedToggle } from "@/components/settings/status-denied-toggle";
+import { StatusAwaitingApprovalToggle } from "@/components/settings/status-awaiting-approval-toggle";
 
 const iconButtonClass =
   "rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-slate-800 dark:hover:text-slate-200";
@@ -20,7 +21,13 @@ export function StatusRow({
   isFirst,
   isLast,
 }: {
-  status: { id: string; name: string; is_terminal: boolean; is_denied: boolean };
+  status: {
+    id: string;
+    name: string;
+    is_terminal: boolean;
+    is_denied: boolean;
+    is_awaiting_approval: boolean;
+  };
   isFirst: boolean;
   isLast: boolean;
 }) {
@@ -136,6 +143,12 @@ export function StatusRow({
       </td>
       <td className="px-3 py-3 text-right">
         <StatusDeniedToggle statusId={status.id} defaultChecked={status.is_denied} />
+      </td>
+      <td className="px-3 py-3 text-right">
+        <StatusAwaitingApprovalToggle
+          statusId={status.id}
+          defaultChecked={status.is_awaiting_approval}
+        />
       </td>
       <td className="w-12 px-3 py-3 text-right">
         <button

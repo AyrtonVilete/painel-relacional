@@ -26,7 +26,7 @@ export default async function StatusesPage() {
   const { data: statuses } = board
     ? await supabase
         .from("statuses")
-        .select("id, name, is_terminal, is_denied")
+        .select("id, name, is_terminal, is_denied, is_awaiting_approval")
         .eq("board_id", board.id)
         .order("order", { ascending: true })
     : { data: [] };
@@ -43,9 +43,11 @@ export default async function StatusesPage() {
           As colunas do quadro — crie, renomeie, reordene ou exclua conforme o
           fluxo de trabalho da sua equipe. Marque quais representam um
           chamado concluído (usado para calcular tempo de resolução e
-          throughput no dashboard) e, se quiser, marque uma coluna como
-          &ldquo;coluna de negados&rdquo; para poder usar o botão
-          &ldquo;Negar&rdquo; nos chamados.
+          throughput no dashboard), marque uma coluna como &ldquo;coluna de
+          negados&rdquo; para poder usar o botão &ldquo;Negar&rdquo; nos
+          chamados, e marque qual coluna representa &ldquo;aguardando
+          aprovação&rdquo; (define se o card mostra o Prazo previsto pra
+          aprovação ou a Execução prevista).
         </p>
       </div>
 

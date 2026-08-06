@@ -530,6 +530,7 @@ export type Database = {
           board_id: string
           created_at: string
           id: string
+          is_awaiting_approval: boolean
           is_denied: boolean
           is_terminal: boolean
           name: string
@@ -539,6 +540,7 @@ export type Database = {
           board_id: string
           created_at?: string
           id?: string
+          is_awaiting_approval?: boolean
           is_denied?: boolean
           is_terminal?: boolean
           name: string
@@ -548,6 +550,7 @@ export type Database = {
           board_id?: string
           created_at?: string
           id?: string
+          is_awaiting_approval?: boolean
           is_denied?: boolean
           is_terminal?: boolean
           name?: string

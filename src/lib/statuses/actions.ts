@@ -25,6 +25,20 @@ export async function updateStatusDenied(id: string, isDenied: boolean) {
   revalidatePath("/dashboard");
 }
 
+export async function updateStatusAwaitingApproval(
+  id: string,
+  isAwaitingApproval: boolean
+) {
+  const supabase = await createClient();
+  await supabase
+    .from("statuses")
+    .update({ is_awaiting_approval: isAwaitingApproval })
+    .eq("id", id);
+  revalidatePath("/settings/statuses");
+  revalidatePath("/board");
+  revalidatePath("/dashboard");
+}
+
 export async function createStatus(
   _prevState: ActionState,
   formData: FormData

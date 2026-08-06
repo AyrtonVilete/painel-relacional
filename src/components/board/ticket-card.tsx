@@ -95,6 +95,7 @@ export function TicketCard({
   developerName,
   isTerminal,
   isDenied,
+  isAwaitingApproval,
   selectionMode = false,
   isSelected = false,
   onToggleSelect,
@@ -106,6 +107,7 @@ export function TicketCard({
   developerName: string | null;
   isTerminal: boolean;
   isDenied: boolean;
+  isAwaitingApproval: boolean;
   selectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: () => void;
@@ -199,11 +201,11 @@ export function TicketCard({
         </p>
       )}
 
-      {!ticket.approved && ticket.deadline && (
+      {isAwaitingApproval && ticket.deadline && (
         <DateBadge label="Prazo" date={ticket.deadline} />
       )}
 
-      {ticket.approved && ticket.execution_deadline && (
+      {!isAwaitingApproval && ticket.execution_deadline && (
         <DateBadge label="Execução prevista" date={ticket.execution_deadline} />
       )}
 

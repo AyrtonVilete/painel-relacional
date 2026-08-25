@@ -410,6 +410,54 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          actor_id: string | null
+          body_preview: string
+          comment_id: string | null
+          created_at: string
+          id: string
+          read_at: string | null
+          recipient_id: string
+          ticket_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          body_preview: string
+          comment_id?: string | null
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          recipient_id: string
+          ticket_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          body_preview?: string
+          comment_id?: string | null
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          recipient_id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           created_at: string

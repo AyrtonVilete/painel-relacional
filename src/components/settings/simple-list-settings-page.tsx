@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { SimpleNameForm } from "@/components/settings/simple-name-form";
+import { ImportTxtButton } from "@/components/settings/import-txt-button";
 import { DeleteButton } from "@/components/settings/delete-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { ActionState } from "@/lib/actions/types";
@@ -22,6 +23,8 @@ export async function SimpleListSettingsPage({
   itemLabel,
   createAction,
   deleteAction,
+  importAction,
+  importLabel,
 }: {
   table: SimpleNameTable;
   title: string;
@@ -36,6 +39,12 @@ export async function SimpleListSettingsPage({
     formData: FormData
   ) => Promise<ActionState>;
   deleteAction: (id: string) => Promise<void>;
+  /** Optional bulk-import-from-.txt action (one name per line). Only
+   * clients uses this today — omit to leave a page single-add-only. */
+  importAction?: (
+    names: string[]
+  ) => Promise<{ error?: string; importedCount?: number }>;
+  importLabel?: string;
 }) {
   const supabase = await createClient();
 
@@ -61,6 +70,11 @@ export async function SimpleListSettingsPage({
           placeholder={placeholder}
           submitLabel="Adicionar"
         />
+        {importAction && (
+          <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800">
+            <ImportTxtButton action={importAction} label={importLabel ?? "Importar .txt"} />
+          </div>
+        )}
       </div>
 
       {items && items.length > 0 ? (

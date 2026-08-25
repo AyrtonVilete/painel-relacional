@@ -1,6 +1,10 @@
 import { Users } from "lucide-react";
 import { SimpleListSettingsPage } from "@/components/settings/simple-list-settings-page";
-import { createClientRecord, deleteClientRecord } from "@/lib/clients/actions";
+import {
+  createClientRecord,
+  deleteClientRecord,
+  bulkCreateClientRecords,
+} from "@/lib/clients/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +20,8 @@ export default function ClientsPage() {
       itemLabel="o cliente"
       createAction={createClientRecord}
       deleteAction={deleteClientRecord}
+      importAction={bulkCreateClientRecords}
+      importLabel="Importar .txt"
     />
   );
 }

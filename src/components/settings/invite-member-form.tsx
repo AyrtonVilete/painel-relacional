@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { UserPlus } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -8,10 +9,18 @@ import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ErrorAlert } from "@/components/ui/alert";
 import { inviteMember } from "@/lib/members/actions";
+import { useResetFormOnSuccess } from "@/lib/utils/use-reset-form-on-success";
 import type { ActionState } from "@/lib/actions/types";
 
-function SubmitButton() {
+function SubmitButton({
+  formRef,
+  hasError,
+}: {
+  formRef: React.RefObject<HTMLFormElement>;
+  hasError: boolean;
+}) {
   const { pending } = useFormStatus();
+  useResetFormOnSuccess(formRef, pending, hasError);
 
   return (
     <Button type="submit" isLoading={pending}>
@@ -26,9 +35,10 @@ export function InviteMemberForm() {
     inviteMember,
     undefined
   );
+  const formRef = useRef<HTMLFormElement>(null);
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form ref={formRef} action={formAction} className="space-y-4">
       {state?.error && <ErrorAlert>{state.error}</ErrorAlert>}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -52,7 +62,7 @@ export function InviteMemberForm() {
         </div>
       </div>
 
-      <SubmitButton />
+      <SubmitButton formRef={formRef} hasError={!!state?.error} />
     </form>
   );
 }

@@ -1,14 +1,25 @@
 "use client";
 
+import { useRef } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ErrorAlert } from "@/components/ui/alert";
+import { useResetFormOnSuccess } from "@/lib/utils/use-reset-form-on-success";
 import type { ActionState } from "@/lib/actions/types";
 
-function SubmitButton({ label }: { label: string }) {
+function SubmitButton({
+  label,
+  formRef,
+  hasError,
+}: {
+  label: string;
+  formRef: React.RefObject<HTMLFormElement>;
+  hasError: boolean;
+}) {
   const { pending } = useFormStatus();
+  useResetFormOnSuccess(formRef, pending, hasError);
 
   return (
     <Button type="submit" isLoading={pending}>
@@ -31,9 +42,10 @@ export function SimpleNameForm({
     action,
     undefined
   );
+  const formRef = useRef<HTMLFormElement>(null);
 
   return (
-    <form action={formAction} className="space-y-3">
+    <form ref={formRef} action={formAction} className="space-y-3">
       {state?.error && <ErrorAlert>{state.error}</ErrorAlert>}
       <div className="flex items-center gap-3">
         <Input
@@ -42,7 +54,7 @@ export function SimpleNameForm({
           required
           className="max-w-xs"
         />
-        <SubmitButton label={submitLabel} />
+        <SubmitButton label={submitLabel} formRef={formRef} hasError={!!state?.error} />
       </div>
     </form>
   );

@@ -20,6 +20,7 @@ import {
   TypeSelect,
   SprintSelect,
   DeveloperSelect,
+  RequesterSelect,
 } from "@/components/board/ticket-select-fields";
 import { createClient } from "@/lib/supabase/client";
 import { parseTicketFormFields } from "@/lib/tickets/parse-ticket-form";
@@ -46,6 +47,7 @@ export function TicketDetailDialog({
   clients,
   ticketTypes,
   membersById,
+  members,
   developers,
   canApprove,
   isAdmin,
@@ -60,6 +62,7 @@ export function TicketDetailDialog({
   clients: Tables<"clients">[];
   ticketTypes: Tables<"ticket_types">[];
   membersById: Map<string, string>;
+  members: { id: string; name: string }[];
   developers: { id: string; name: string }[];
   canApprove: boolean;
   isAdmin: boolean;
@@ -323,6 +326,7 @@ export function TicketDetailDialog({
     const deadlineValue = String(formData.get("deadline") ?? "");
     const executionDeadlineValue = String(formData.get("executionDeadline") ?? "");
     const description = String(formData.get("description") ?? "").trim();
+    const requesterValue = String(formData.get("requesterId") ?? "") || ticket.created_by;
 
     const { data, error: updateError } = await supabase
       .from("tickets")
@@ -338,6 +342,7 @@ export function TicketDetailDialog({
         execution_deadline: executionDeadlineValue || null,
         status_id: newStatusId,
         sprint_id: newSprintId,
+        created_by: requesterValue,
       })
       .eq("id", ticket.id)
       .select()
@@ -643,6 +648,10 @@ export function TicketDetailDialog({
               defaultValue={ticket.deadline ?? ""}
             />
           </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <RequesterSelect members={members} defaultValue={ticket.created_by} />
         </div>
 
         <div className="grid grid-cols-2 gap-4">

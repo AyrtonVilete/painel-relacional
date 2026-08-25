@@ -75,6 +75,37 @@ export function SprintSelect({
   );
 }
 
+// The ticket's created_by is the org member it's registered under — not
+// necessarily whoever is filling out this form (a teammate can open a
+// ticket on someone else's behalf). If that member has since left the org
+// they won't be in `members`, so their id is kept as a synthetic option
+// instead of the <select> silently falling back to whichever option is
+// first and reassigning the ticket on save.
+export function RequesterSelect({
+  members,
+  defaultValue,
+}: {
+  members: { id: string; name: string }[];
+  defaultValue?: string | null;
+}) {
+  const hasDefault = members.some((m) => m.id === defaultValue);
+  return (
+    <div>
+      <Label htmlFor="requesterId">Registrado para</Label>
+      <Select id="requesterId" name="requesterId" defaultValue={defaultValue ?? ""} required>
+        {defaultValue && !hasDefault && (
+          <option value={defaultValue}>Usuário removido</option>
+        )}
+        {members.map((m) => (
+          <option key={m.id} value={m.id}>
+            {m.name}
+          </option>
+        ))}
+      </Select>
+    </div>
+  );
+}
+
 export function DeveloperSelect({
   developers,
   defaultValue,

@@ -13,6 +13,7 @@ import {
   TypeSelect,
   SprintSelect,
   DeveloperSelect,
+  RequesterSelect,
 } from "@/components/board/ticket-select-fields";
 import { createClient } from "@/lib/supabase/client";
 import { parseTicketFormFields } from "@/lib/tickets/parse-ticket-form";
@@ -28,6 +29,8 @@ export function CreateTicketDialog({
   ticketTypes,
   sprints,
   developers,
+  members,
+  currentUserId,
   onCreated,
 }: {
   open: boolean;
@@ -39,6 +42,8 @@ export function CreateTicketDialog({
   ticketTypes: Tables<"ticket_types">[];
   sprints: Tables<"sprints">[];
   developers: { id: string; name: string }[];
+  members: { id: string; name: string }[];
+  currentUserId: string;
   onCreated: (ticket: Tables<"tickets">) => void;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -76,6 +81,7 @@ export function CreateTicketDialog({
     const developerId = String(formData.get("developerId") ?? "");
     const deadline = String(formData.get("deadline") ?? "");
     const description = String(formData.get("description") ?? "").trim();
+    const requesterId = String(formData.get("requesterId") ?? "") || user.id;
 
     const { data, error: insertError } = await supabase
       .from("tickets")
@@ -92,7 +98,7 @@ export function CreateTicketDialog({
         sprint_id: sprintId || null,
         developer_id: developerId || null,
         deadline: deadline || null,
-        created_by: user.id,
+        created_by: requesterId,
       })
       .select()
       .single();
@@ -179,6 +185,10 @@ export function CreateTicketDialog({
         <div className="grid grid-cols-2 gap-4">
           {sprints.length > 0 && <SprintSelect sprints={sprints} />}
           <DeveloperSelect developers={developers} />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <RequesterSelect members={members} defaultValue={currentUserId} />
         </div>
 
         <div className="flex justify-end gap-3 pt-2">

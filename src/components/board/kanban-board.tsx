@@ -67,7 +67,7 @@ export function KanbanBoard({
     initialFilters.developerFilter
   );
   const [clientFilter, setClientFilter] = useState(initialFilters.clientFilter);
-  const [onlyMine, setOnlyMine] = useState(initialFilters.onlyMine);
+  const [userFilter, setUserFilter] = useState(initialFilters.userFilter);
   const [searchQuery, setSearchQuery] = useState(initialFilters.searchQuery);
   const [createdFrom, setCreatedFrom] = useState(initialFilters.createdFrom);
   const [createdTo, setCreatedTo] = useState(initialFilters.createdTo);
@@ -113,7 +113,7 @@ export function KanbanBoard({
               sprintFilter,
               developerFilter,
               clientFilter,
-              onlyMine,
+              userFilter,
               searchQuery,
               createdFrom,
               createdTo,
@@ -132,7 +132,7 @@ export function KanbanBoard({
     sprintFilter,
     developerFilter,
     clientFilter,
-    onlyMine,
+    userFilter,
     searchQuery,
     createdFrom,
     createdTo,
@@ -150,6 +150,11 @@ export function KanbanBoard({
   const developersById = useMemo(
     () => new Map(developers.map((d) => [d.id, d.name])),
     [developers]
+  );
+
+  const members = useMemo(
+    () => Array.from(membersById, ([id, name]) => ({ id, name })),
+    [membersById]
   );
 
   const terminalStatusIds = useMemo(
@@ -186,8 +191,8 @@ export function KanbanBoard({
       result = result.filter((t) => clientFilter.includes(t.client_id ?? "none"));
     }
 
-    if (onlyMine) {
-      result = result.filter((t) => t.created_by === currentUserId);
+    if (userFilter.length > 0) {
+      result = result.filter((t) => userFilter.includes(t.created_by));
     }
 
     if (createdFrom) {
@@ -224,8 +229,7 @@ export function KanbanBoard({
     statusFilter,
     developerFilter,
     clientFilter,
-    onlyMine,
-    currentUserId,
+    userFilter,
     searchQuery,
     createdFrom,
     createdTo,
@@ -238,7 +242,7 @@ export function KanbanBoard({
     sprintFilter.length > 0 ||
     developerFilter.length > 0 ||
     clientFilter.length > 0 ||
-    onlyMine !== DEFAULT_BOARD_FILTERS.onlyMine ||
+    userFilter.length > 0 ||
     searchQuery.trim() !== "" ||
     createdFrom !== "" ||
     createdTo !== "";
@@ -248,7 +252,7 @@ export function KanbanBoard({
     setSprintFilter(DEFAULT_BOARD_FILTERS.sprintFilter);
     setDeveloperFilter(DEFAULT_BOARD_FILTERS.developerFilter);
     setClientFilter(DEFAULT_BOARD_FILTERS.clientFilter);
-    setOnlyMine(DEFAULT_BOARD_FILTERS.onlyMine);
+    setUserFilter(DEFAULT_BOARD_FILTERS.userFilter);
     setSearchQuery(DEFAULT_BOARD_FILTERS.searchQuery);
     setCreatedFrom(DEFAULT_BOARD_FILTERS.createdFrom);
     setCreatedTo(DEFAULT_BOARD_FILTERS.createdTo);
@@ -542,11 +546,17 @@ export function KanbanBoard({
 
           <button
             type="button"
-            onClick={() => setOnlyMine((prev) => !prev)}
-            aria-pressed={onlyMine}
+            onClick={() =>
+              setUserFilter((prev) =>
+                prev.length === 1 && prev[0] === currentUserId
+                  ? []
+                  : [currentUserId]
+              )
+            }
+            aria-pressed={userFilter.length === 1 && userFilter[0] === currentUserId}
             className={clsx(
               "rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-              onlyMine
+              userFilter.length === 1 && userFilter[0] === currentUserId
                 ? "border-indigo-600 bg-indigo-600 text-white dark:border-indigo-500 dark:bg-indigo-500"
                 : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
             )}
@@ -615,6 +625,15 @@ export function KanbanBoard({
               ]}
               selected={clientFilter}
               onApply={setClientFilter}
+            />
+          )}
+
+          {members.length > 0 && (
+            <FilterChip
+              label="Usuário"
+              options={members.map((m) => ({ value: m.id, label: m.name }))}
+              selected={userFilter}
+              onApply={setUserFilter}
             />
           )}
 
@@ -786,6 +805,8 @@ export function KanbanBoard({
           ticketTypes={ticketTypes}
           sprints={sprints}
           developers={developers}
+          members={members}
+          currentUserId={currentUserId}
           onCreated={handleCreated}
         />
       )}
@@ -799,6 +820,7 @@ export function KanbanBoard({
           clients={clients}
           ticketTypes={ticketTypes}
           membersById={membersById}
+          members={members}
           developers={developers}
           canApprove={canApprove}
           isAdmin={isAdmin}

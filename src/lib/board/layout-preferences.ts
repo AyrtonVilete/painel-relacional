@@ -5,7 +5,7 @@ export type BoardFilters = {
   sprintFilter: string[];
   developerFilter: string[];
   clientFilter: string[];
-  onlyMine: boolean;
+  userFilter: string[];
   searchQuery: string;
   createdFrom: string;
   createdTo: string;
@@ -16,7 +16,7 @@ export const DEFAULT_BOARD_FILTERS: BoardFilters = {
   sprintFilter: [],
   developerFilter: [],
   clientFilter: [],
-  onlyMine: false,
+  userFilter: [],
   searchQuery: "",
   createdFrom: "",
   createdTo: "",
@@ -46,10 +46,7 @@ export function parseBoardFilters(json: unknown): BoardFilters {
     sprintFilter: normalizeMultiFilter(raw.sprintFilter),
     developerFilter: normalizeMultiFilter(raw.developerFilter),
     clientFilter: normalizeMultiFilter(raw.clientFilter),
-    onlyMine:
-      typeof raw.onlyMine === "boolean"
-        ? raw.onlyMine
-        : DEFAULT_BOARD_FILTERS.onlyMine,
+    userFilter: normalizeMultiFilter(raw.userFilter),
     searchQuery:
       typeof raw.searchQuery === "string"
         ? raw.searchQuery

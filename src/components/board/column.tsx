@@ -14,9 +14,6 @@ export function Column({
   developersById,
   onAddTicket,
   onSelectTicket,
-  selectionMode = false,
-  selectedTicketIds,
-  onToggleSelect,
 }: {
   status: Tables<"statuses">;
   tickets: Tables<"tickets">[];
@@ -25,9 +22,6 @@ export function Column({
   developersById: Map<string, string>;
   onAddTicket: () => void;
   onSelectTicket: (ticket: Tables<"tickets">) => void;
-  selectionMode?: boolean;
-  selectedTicketIds?: Set<string>;
-  onToggleSelect?: (ticketId: string) => void;
 }) {
   const isTerminal = status.is_terminal;
   const isDenied = status.is_denied;
@@ -83,9 +77,6 @@ export function Column({
             isTerminal={isTerminal}
             isDenied={isDenied}
             isAwaitingApproval={isAwaitingApproval}
-            selectionMode={selectionMode}
-            isSelected={selectedTicketIds?.has(ticket.id) ?? false}
-            onToggleSelect={() => onToggleSelect?.(ticket.id)}
             onClick={() => onSelectTicket(ticket)}
           />
         ))}

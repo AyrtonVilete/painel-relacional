@@ -364,17 +364,17 @@ export function TicketDetailDialog({
   }
 
   // Execution deadline is captured right here instead of left as a normal
-  // form field — the whole point is that every approval leaves the ticket
-  // with a known execution target, not a value someone has to remember to
-  // fill in separately afterward.
+  // form field — while it's known, it's more likely to get filled in this
+  // way than left for someone to remember separately afterward. It's
+  // optional though: some tickets get approved before a start date is
+  // known, and that shouldn't block approval — it can be set later from
+  // the Execução prevista field below.
   async function handleApprove() {
-    if (!executionDateInput) return;
-
     setIsApproving(true);
     const supabase = createClient();
     const { data, error: approveError } = await supabase
       .from("tickets")
-      .update({ approved: true, execution_deadline: executionDateInput })
+      .update({ approved: true, execution_deadline: executionDateInput || null })
       .eq("id", ticket.id)
       .select()
       .single();
@@ -483,19 +483,14 @@ export function TicketDetailDialog({
             <div className="flex items-center gap-2">
               <Input
                 type="date"
-                required
                 autoFocus
                 value={executionDateInput}
                 onChange={(e) => setExecutionDateInput(e.target.value)}
-                aria-label="Execução prevista"
+                aria-label="Execução prevista (opcional)"
+                placeholder="Opcional"
                 className="w-40"
               />
-              <Button
-                type="button"
-                isLoading={isApproving}
-                disabled={!executionDateInput}
-                onClick={handleApprove}
-              >
+              <Button type="button" isLoading={isApproving} onClick={handleApprove}>
                 Confirmar aprovação
               </Button>
               <button

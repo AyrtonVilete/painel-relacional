@@ -96,9 +96,6 @@ export function TicketCard({
   isTerminal,
   isDenied,
   isAwaitingApproval,
-  selectionMode = false,
-  isSelected = false,
-  onToggleSelect,
   onClick,
 }: {
   ticket: Tables<"tickets">;
@@ -108,35 +105,22 @@ export function TicketCard({
   isTerminal: boolean;
   isDenied: boolean;
   isAwaitingApproval: boolean;
-  selectionMode?: boolean;
-  isSelected?: boolean;
-  onToggleSelect?: () => void;
   onClick: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({ id: ticket.id, disabled: selectionMode });
+    useDraggable({ id: ticket.id });
 
   const style = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
     : undefined;
 
-  function handleClick() {
-    if (selectionMode) {
-      onToggleSelect?.();
-      return;
-    }
-    onClick();
-  }
-
   // Enter opens the detail dialog (the accessible way to change status —
   // it has its own status <Select>), while other keys (notably Space)
   // still go to dnd-kit's own listener so keyboard-driven drag still works.
-  // In selection mode, Enter toggles selection instead, matching the click
-  // behavior above.
   function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
     if (e.key === "Enter") {
       e.preventDefault();
-      handleClick();
+      onClick();
       return;
     }
     listeners?.onKeyDown?.(e);
@@ -149,27 +133,14 @@ export function TicketCard({
       {...listeners}
       {...attributes}
       onKeyDown={handleKeyDown}
-      onClick={handleClick}
+      onClick={onClick}
       aria-label={`Chamado número ${ticket.ticket_number}: ${ticket.title}`}
       className={clsx(
-        "cursor-pointer touch-none overflow-hidden rounded-lg border bg-white p-3 shadow-sm transition-shadow hover:shadow-md dark:bg-slate-900",
-        isSelected
-          ? "border-indigo-500 ring-2 ring-indigo-500/40 dark:border-indigo-400"
-          : "border-slate-200 dark:border-slate-800",
+        "cursor-pointer touch-none overflow-hidden rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-900",
         isDragging && "opacity-40"
       )}
     >
       <div className="flex items-start gap-2">
-        {selectionMode && (
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={() => onToggleSelect?.()}
-            onClick={(e) => e.stopPropagation()}
-            aria-label={`Selecionar chamado ${ticket.ticket_number}`}
-            className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-800"
-          />
-        )}
         <div className="min-w-0 flex-1">
           <p className="text-xs font-medium text-slate-400 dark:text-slate-500">
             #{ticket.ticket_number}

@@ -13,9 +13,8 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { Search, X, CheckSquare } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { Column } from "@/components/board/column";
 import { FilterChip } from "@/components/board/filter-chip";
 import { URGENCY_RANK } from "@/components/board/urgency-badge";
@@ -77,10 +76,6 @@ export function KanbanBoard({
   const [createStatusId, setCreateStatusId] = useState<string | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<Tables<"tickets"> | null>(
     null
-  );
-  const [selectionMode, setSelectionMode] = useState(false);
-  const [selectedTicketIds, setSelectedTicketIds] = useState<Set<string>>(
-    new Set()
   );
 
   const sensors = useSensors(
@@ -316,135 +311,6 @@ export function KanbanBoard({
     setTickets((prev) => prev.filter((t) => t.id !== ticketId));
   }
 
-  function toggleTicketSelection(ticketId: string) {
-    setSelectedTicketIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(ticketId)) {
-        next.delete(ticketId);
-      } else {
-        next.add(ticketId);
-      }
-      return next;
-    });
-  }
-
-  function exitSelectionMode() {
-    setSelectionMode(false);
-    setSelectedTicketIds(new Set());
-  }
-
-  // Bulk status/sprint changes both go through move_ticket (not a plain
-  // .update()) so ticket_history stays accurate — same reason the drag
-  // handler and the detail dialog route status/sprint changes through it.
-  async function handleBulkStatusChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const newStatusId = e.target.value;
-    e.target.value = "";
-    if (!newStatusId) return;
-
-    const ids = Array.from(selectedTicketIds);
-    const previous = tickets;
-    setTickets((prev) =>
-      prev.map((t) => (ids.includes(t.id) ? { ...t, status_id: newStatusId } : t))
-    );
-
-    const supabase = createClient();
-    const results = await Promise.all(
-      ids.map((id) =>
-        supabase.rpc("move_ticket", { p_ticket_id: id, p_new_status_id: newStatusId })
-      )
-    );
-
-    const failedIds = ids.filter((_, i) => results[i].error);
-    if (failedIds.length > 0) {
-      setTickets((prev) =>
-        prev.map((t) =>
-          failedIds.includes(t.id) ? previous.find((p) => p.id === t.id) ?? t : t
-        )
-      );
-      showToast(
-        failedIds.length === ids.length
-          ? "Não foi possível mudar o status dos chamados selecionados."
-          : `Não foi possível mudar o status de ${failedIds.length} chamado(s).`
-      );
-    }
-
-    exitSelectionMode();
-  }
-
-  async function handleBulkSprintChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const value = e.target.value;
-    e.target.value = "";
-    if (!value) return;
-    const newSprintId = value === "none" ? null : value;
-
-    const ids = Array.from(selectedTicketIds);
-    const previous = tickets;
-    setTickets((prev) =>
-      prev.map((t) => (ids.includes(t.id) ? { ...t, sprint_id: newSprintId } : t))
-    );
-
-    const supabase = createClient();
-    const results = await Promise.all(
-      ids.map((id) =>
-        supabase.rpc("move_ticket", {
-          p_ticket_id: id,
-          p_new_sprint_id: newSprintId ?? undefined,
-          p_sprint_explicitly_set: true,
-        })
-      )
-    );
-
-    const failedIds = ids.filter((_, i) => results[i].error);
-    if (failedIds.length > 0) {
-      setTickets((prev) =>
-        prev.map((t) =>
-          failedIds.includes(t.id) ? previous.find((p) => p.id === t.id) ?? t : t
-        )
-      );
-      showToast(
-        failedIds.length === ids.length
-          ? "Não foi possível mudar a sprint dos chamados selecionados."
-          : `Não foi possível mudar a sprint de ${failedIds.length} chamado(s).`
-      );
-    }
-
-    exitSelectionMode();
-  }
-
-  // Developer assignment isn't logged in ticket_history (see the
-  // developers-table note elsewhere in this project — developer is a
-  // decoupled roster, not tied to move_ticket's status/sprint tracking),
-  // so a single batched update is enough here, unlike the two handlers
-  // above.
-  async function handleBulkDeveloperChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const value = e.target.value;
-    e.target.value = "";
-    if (!value) return;
-    const newDeveloperId = value === "none" ? null : value;
-
-    const ids = Array.from(selectedTicketIds);
-    const previous = tickets;
-    setTickets((prev) =>
-      prev.map((t) =>
-        ids.includes(t.id) ? { ...t, developer_id: newDeveloperId } : t
-      )
-    );
-
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("tickets")
-      .update({ developer_id: newDeveloperId })
-      .in("id", ids);
-
-    if (error) {
-      setTickets(previous);
-      showToast(
-        "Não foi possível atribuir o desenvolvedor aos chamados selecionados."
-      );
-    }
-
-    exitSelectionMode();
-  }
 
   // The board only scrolls horizontally (overflow-x-auto), but a plain
   // mouse wheel only ever produces vertical delta — trackpads that already
@@ -479,29 +345,6 @@ export function KanbanBoard({
 
     e.preventDefault();
     container.scrollLeft += e.deltaY;
-  }
-
-  async function handleBulkDelete() {
-    const ids = Array.from(selectedTicketIds);
-    if (ids.length === 0) return;
-    if (
-      !window.confirm(
-        `Excluir ${ids.length} ${ids.length === 1 ? "chamado" : "chamados"}? Essa ação não pode ser desfeita.`
-      )
-    ) {
-      return;
-    }
-
-    const supabase = createClient();
-    const { error } = await supabase.from("tickets").delete().in("id", ids);
-
-    if (error) {
-      showToast("Não foi possível excluir os chamados selecionados.");
-      return;
-    }
-
-    setTickets((prev) => prev.filter((t) => !ids.includes(t.id)));
-    exitSelectionMode();
   }
 
   return (
@@ -562,27 +405,6 @@ export function KanbanBoard({
             )}
           >
             Meus chamados
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              if (selectionMode) {
-                exitSelectionMode();
-              } else {
-                setSelectionMode(true);
-              }
-            }}
-            aria-pressed={selectionMode}
-            className={clsx(
-              "inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-              selectionMode
-                ? "border-indigo-600 bg-indigo-600 text-white dark:border-indigo-500 dark:bg-indigo-500"
-                : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-            )}
-          >
-            <CheckSquare className="h-3.5 w-3.5" aria-hidden />
-            Selecionar chamados
           </button>
 
           <FilterChip
@@ -658,85 +480,6 @@ export function KanbanBoard({
             />
           </div>
         </div>
-
-        {selectionMode && (
-          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-indigo-200 bg-indigo-50/60 px-3 py-2.5 dark:border-indigo-900 dark:bg-indigo-950/30">
-            <span className="text-sm font-medium text-indigo-900 dark:text-indigo-200">
-              {selectedTicketIds.size}{" "}
-              {selectedTicketIds.size === 1 ? "selecionado" : "selecionados"}
-            </span>
-
-            <Select
-              value=""
-              onChange={handleBulkStatusChange}
-              disabled={selectedTicketIds.size === 0}
-              aria-label="Mudar status dos selecionados"
-              className="w-44"
-            >
-              <option value="">Mudar status...</option>
-              {statuses.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </Select>
-
-            {developers.length > 0 && (
-              <Select
-                value=""
-                onChange={handleBulkDeveloperChange}
-                disabled={selectedTicketIds.size === 0}
-                aria-label="Atribuir desenvolvedor aos selecionados"
-                className="w-52"
-              >
-                <option value="">Atribuir desenvolvedor...</option>
-                <option value="none">Sem desenvolvedor</option>
-                {developers.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                ))}
-              </Select>
-            )}
-
-            {sprints.length > 0 && (
-              <Select
-                value=""
-                onChange={handleBulkSprintChange}
-                disabled={selectedTicketIds.size === 0}
-                aria-label="Atribuir sprint aos selecionados"
-                className="w-44"
-              >
-                <option value="">Atribuir sprint...</option>
-                <option value="none">Sem sprint</option>
-                {sprints.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </Select>
-            )}
-
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={handleBulkDelete}
-                disabled={selectedTicketIds.size === 0}
-                className="rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-900 dark:bg-slate-900 dark:text-red-400 dark:hover:bg-red-950/40"
-              >
-                Excluir
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={exitSelectionMode}
-              className="ml-auto text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-            >
-              Cancelar seleção
-            </button>
-          </div>
-        )}
       </div>
 
       <DndContext
@@ -759,9 +502,6 @@ export function KanbanBoard({
               developersById={developersById}
               onAddTicket={() => setCreateStatusId(status.id)}
               onSelectTicket={setSelectedTicket}
-              selectionMode={selectionMode}
-              selectedTicketIds={selectedTicketIds}
-              onToggleSelect={toggleTicketSelection}
             />
           ))}
         </div>

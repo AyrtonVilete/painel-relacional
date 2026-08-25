@@ -57,10 +57,26 @@ export async function inviteMember(
     return { error: "Não foi possível registrar o convite" };
   }
 
+  // Surfaced in the invite email via the {{ .Data.* }} template variable
+  // (Supabase populates it from this metadata) — lets the "Invite user"
+  // template say who's inviting and to which org instead of a generic
+  // "you've been invited" with no context.
+  const { data: inviterProfile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user?.id ?? "")
+    .maybeSingle();
+
   const admin = createAdminClient();
   const { error } = await admin.auth.admin.inviteUserByEmail(
     parsed.data.email,
-    { redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/invite/set-password` }
+    {
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/invite/set-password`,
+      data: {
+        inviter_name: inviterProfile?.full_name ?? "Um administrador",
+        organization_name: membership.organizations?.name ?? "a organização",
+      },
+    }
   );
 
   if (error) {

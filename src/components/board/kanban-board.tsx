@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import {
   DndContext,
@@ -13,7 +14,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { Search, X } from "lucide-react";
+import { Search, X, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Column } from "@/components/board/column";
 import { FilterChip } from "@/components/board/filter-chip";
@@ -23,6 +24,7 @@ import { CreateTicketDialog } from "@/components/board/create-ticket-dialog";
 import { TicketDetailDialog } from "@/components/board/ticket-detail-dialog";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
+import { ticketsToCsv, downloadCsv } from "@/lib/tickets/export-csv";
 import {
   DEFAULT_BOARD_FILTERS,
   type BoardFilters,
@@ -43,6 +45,8 @@ export function KanbanBoard({
   initialFilters,
   canApprove,
   isAdmin,
+  initialTicketId,
+  initialCommentId,
 }: {
   boardId: string;
   organizationId: string;
@@ -57,8 +61,11 @@ export function KanbanBoard({
   initialFilters: BoardFilters;
   canApprove: boolean;
   isAdmin: boolean;
+  initialTicketId?: string;
+  initialCommentId?: string;
 }) {
   const { showToast } = useToast();
+  const router = useRouter();
   const [tickets, setTickets] = useState(initialTickets);
   const [sprintFilter, setSprintFilter] = useState(initialFilters.sprintFilter);
   const [statusFilter, setStatusFilter] = useState(initialFilters.statusFilter);
@@ -77,6 +84,27 @@ export function KanbanBoard({
   const [selectedTicket, setSelectedTicket] = useState<Tables<"tickets"> | null>(
     null
   );
+  const [scrollToCommentId, setScrollToCommentId] = useState<string | undefined>(
+    undefined
+  );
+
+  // Deep link from a notification click (/board?ticket=..&comment=..). This
+  // fires on first mount (fresh page load with the params already in the
+  // URL) *and* whenever initialTicketId changes afterward — clicking a
+  // notification while already on /board is a same-route client
+  // navigation, so the component isn't remounted, only re-rendered with new
+  // props once the server round-trips the new searchParams. Depending on
+  // just `[]` here would miss that second case entirely.
+  useEffect(() => {
+    if (!initialTicketId) return;
+    const ticket = tickets.find((t) => t.id === initialTicketId);
+    if (ticket) {
+      setSelectedTicket(ticket);
+      setScrollToCommentId(initialCommentId);
+    }
+    router.replace("/board");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialTicketId, initialCommentId]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -140,6 +168,14 @@ export function KanbanBoard({
   const ticketTypesById = useMemo(
     () => new Map(ticketTypes.map((t) => [t.id, t.name])),
     [ticketTypes]
+  );
+  const statusesById = useMemo(
+    () => new Map(statuses.map((s) => [s.id, s.name])),
+    [statuses]
+  );
+  const sprintsById = useMemo(
+    () => new Map(sprints.map((s) => [s.id, s.name])),
+    [sprints]
   );
 
   const developersById = useMemo(
@@ -253,6 +289,18 @@ export function KanbanBoard({
     setCreatedTo(DEFAULT_BOARD_FILTERS.createdTo);
   }
 
+  function handleExportCsv() {
+    const csv = ticketsToCsv(visibleTickets, {
+      statusesById,
+      clientsById,
+      ticketTypesById,
+      developersById,
+      membersById,
+      sprintsById,
+    });
+    downloadCsv(`chamados-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+  }
+
   const visibleStatuses = useMemo(
     () =>
       statusFilter.length === 0
@@ -356,20 +404,37 @@ export function KanbanBoard({
             {visibleTickets.length === 1 ? "chamado" : "chamados"}
           </p>
 
-          <button
-            type="button"
-            onClick={handleClearFilters}
-            disabled={!hasActiveFilters}
-            className={clsx(
-              "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors",
-              hasActiveFilters
-                ? "text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/40"
-                : "cursor-not-allowed text-slate-300 dark:text-slate-700"
-            )}
-          >
-            <X className="h-3.5 w-3.5" aria-hidden />
-            Limpar filtros
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              disabled={visibleTickets.length === 0}
+              className={clsx(
+                "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors",
+                visibleTickets.length > 0
+                  ? "text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/40"
+                  : "cursor-not-allowed text-slate-300 dark:text-slate-700"
+              )}
+            >
+              <Download className="h-3.5 w-3.5" aria-hidden />
+              Exportar CSV
+            </button>
+
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              disabled={!hasActiveFilters}
+              className={clsx(
+                "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors",
+                hasActiveFilters
+                  ? "text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/40"
+                  : "cursor-not-allowed text-slate-300 dark:text-slate-700"
+              )}
+            >
+              <X className="h-3.5 w-3.5" aria-hidden />
+              Limpar filtros
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -554,7 +619,10 @@ export function KanbanBoard({
       {selectedTicket && (
         <TicketDetailDialog
           ticket={selectedTicket}
-          onClose={() => setSelectedTicket(null)}
+          onClose={() => {
+            setSelectedTicket(null);
+            setScrollToCommentId(undefined);
+          }}
           statuses={statuses}
           sprints={sprints}
           clients={clients}
@@ -565,6 +633,7 @@ export function KanbanBoard({
           canApprove={canApprove}
           isAdmin={isAdmin}
           currentUserId={currentUserId}
+          scrollToCommentId={scrollToCommentId}
           onUpdated={handleUpdated}
           onDeleted={handleDeleted}
         />

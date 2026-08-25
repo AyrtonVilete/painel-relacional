@@ -10,7 +10,13 @@ import { parseBoardFilters } from "@/lib/board/layout-preferences";
 // — force fully dynamic, uncached rendering.
 export const dynamic = "force-dynamic";
 
-export default async function BoardPage() {
+export default async function BoardPage({
+  searchParams,
+}: {
+  searchParams: { ticket?: string; comment?: string };
+}) {
+  const initialTicketId = searchParams.ticket;
+  const initialCommentId = searchParams.comment;
   const supabase = await createClient();
 
   const {
@@ -107,6 +113,8 @@ export default async function BoardPage() {
         role={membership.role}
         isAdmin={isAdmin}
         active="board"
+        currentUserId={user?.id ?? ""}
+        membersById={membersById}
       />
 
       <div className="mx-auto flex w-full min-w-0 max-w-[100rem] flex-1 overflow-hidden">
@@ -131,6 +139,8 @@ export default async function BoardPage() {
             initialFilters={initialFilters}
             canApprove={canApprove}
             isAdmin={isAdmin}
+            initialTicketId={initialTicketId}
+            initialCommentId={initialCommentId}
           />
         ) : (
           <div className="flex flex-1 items-center justify-center px-6 text-center">

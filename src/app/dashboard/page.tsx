@@ -39,35 +39,61 @@ export default async function DashboardPage() {
     return null;
   }
 
-  const [{ data: statuses }, { data: tickets }, { data: sprints }, { data: developers }] =
-    await Promise.all([
-      supabase
-        .from("statuses")
-        .select("id, name, is_terminal, is_denied, is_awaiting_approval")
-        .eq("board_id", board.id)
-        .order("order", { ascending: true }),
-      supabase
-        .from("tickets")
-        .select(
-          "id, status_id, urgency, approved, deadline, execution_deadline, next_followup_due, sprint_id, developer_id, created_at"
-        )
-        .eq("board_id", board.id),
-      supabase
-        .from("sprints")
-        .select("id, name")
-        .eq("board_id", board.id)
-        .order("start_date", { ascending: true }),
-      supabase
-        .from("developers")
-        .select("id, name")
-        .eq("organization_id", membership.organization_id)
-        .order("name"),
-    ]);
+  const [
+    { data: statuses },
+    { data: tickets },
+    { data: sprints },
+    { data: developers },
+    { data: orgMemberships },
+  ] = await Promise.all([
+    supabase
+      .from("statuses")
+      .select("id, name, is_terminal, is_denied, is_awaiting_approval")
+      .eq("board_id", board.id)
+      .order("order", { ascending: true }),
+    supabase
+      .from("tickets")
+      .select(
+        "id, status_id, urgency, approved, deadline, execution_deadline, next_followup_due, sprint_id, developer_id, created_by, created_at"
+      )
+      .eq("board_id", board.id),
+    supabase
+      .from("sprints")
+      .select("id, name")
+      .eq("board_id", board.id)
+      .order("start_date", { ascending: true }),
+    supabase
+      .from("developers")
+      .select("id, name")
+      .eq("organization_id", membership.organization_id)
+      .order("name"),
+    // Scoped by organization_id first, same reasoning as /board: express
+    // "this org's members" via the query's own filter, not just RLS.
+    supabase
+      .from("memberships")
+      .select("user_id")
+      .eq("organization_id", membership.organization_id),
+  ]);
 
   const safeTickets = tickets ?? [];
   const safeStatuses = statuses ?? [];
   const safeSprints = sprints ?? [];
   const safeDevelopers = developers ?? [];
+
+  const orgMemberUserIds = (orgMemberships ?? []).map((m) => m.user_id);
+  const { data: memberProfiles } =
+    orgMemberUserIds.length > 0
+      ? await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", orgMemberUserIds)
+      : { data: [] };
+
+  const members = (memberProfiles ?? []).map((p) => ({
+    id: p.id,
+    name: p.full_name ?? "Sem nome",
+  }));
+  const membersById = new Map(members.map((m) => [m.id, m.name]));
 
   const terminalStatusIds = new Set(
     safeStatuses.filter((s) => s.is_terminal).map((s) => s.id)
@@ -149,6 +175,17 @@ export default async function DashboardPage() {
     },
   ];
 
+  // Every ticket ever registered under this person, not just the ones
+  // still open — this is an audit/reporting view ("quem registrou o quê"),
+  // unlike byDeveloper above which is about current workload.
+  const byRequester = members
+    .map((m) => ({
+      name: m.name,
+      value: safeTickets.filter((t) => t.created_by === m.id).length,
+    }))
+    .filter((r) => r.value > 0)
+    .sort((a, b) => b.value - a.value);
+
   const today = new Date().toISOString().slice(0, 10);
 
   const totalTickets = safeTickets.length;
@@ -210,6 +247,8 @@ export default async function DashboardPage() {
         role={membership.role}
         isAdmin={membership.role === "admin"}
         active="dashboard"
+        currentUserId={user?.id ?? ""}
+        membersById={membersById}
       />
 
       <main className="mx-auto w-full max-w-[100rem] flex-1 px-6 py-8">
@@ -235,6 +274,7 @@ export default async function DashboardPage() {
           bySprint={bySprint}
           throughput={throughput}
           byDeveloper={byDeveloper}
+          byRequester={byRequester}
         />
       </main>
     </div>

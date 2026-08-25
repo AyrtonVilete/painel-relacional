@@ -4,6 +4,7 @@ import { logout } from "@/lib/auth/actions";
 import { LogoMark } from "@/components/brand/logo-mark";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { NotificationBell } from "@/components/layout/notification-bell";
 
 export function AppHeader({
   orgName,
@@ -11,12 +12,16 @@ export function AppHeader({
   role,
   isAdmin,
   active,
+  currentUserId,
+  membersById,
 }: {
   orgName: string;
   userEmail: string | undefined;
   role: string | null;
   isAdmin: boolean;
   active: "board" | "dashboard";
+  currentUserId: string;
+  membersById: Map<string, string>;
 }) {
   return (
     <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
@@ -55,6 +60,7 @@ export function AppHeader({
               </Button>
             </Link>
           )}
+          <NotificationBell currentUserId={currentUserId} membersById={membersById} />
           <ThemeToggle />
           <form action={logout}>
             <Button type="submit" variant="secondary">

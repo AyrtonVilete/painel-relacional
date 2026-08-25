@@ -112,6 +112,7 @@ export function DashboardCharts({
   bySprint,
   throughput,
   byDeveloper,
+  byRequester,
 }: {
   totalTickets: number;
   pendingApproval: number;
@@ -125,10 +126,12 @@ export function DashboardCharts({
   bySprint: CountDatum[];
   throughput: ThroughputDatum[];
   byDeveloper: CountDatum[];
+  byRequester: CountDatum[];
 }) {
   const statusChartHeight = Math.max(byStatus.length * 44, 120);
   const sprintChartHeight = Math.max(bySprint.length * 44, 120);
   const developerChartHeight = Math.max(byDeveloper.length * 44, 120);
+  const requesterChartHeight = Math.max(byRequester.length * 44, 120);
 
   return (
     <div className="space-y-6">
@@ -275,6 +278,41 @@ export function DashboardCharts({
             <ResponsiveContainer width="100%" height={developerChartHeight}>
               <BarChart
                 data={byDeveloper}
+                layout="vertical"
+                margin={{ top: 0, right: 24, bottom: 0, left: 0 }}
+              >
+                <XAxis type="number" allowDecimals={false} hide />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={140}
+                  tick={{ fontSize: 12, fill: AXIS_COLOR }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  cursor={{ fill: "rgba(148, 163, 184, 0.1)" }}
+                  contentStyle={tooltipStyle}
+                />
+                <Bar dataKey="value" fill={BRAND_COLOR} radius={[0, 4, 4, 0]} maxBarSize={24}>
+                  <LabelList
+                    dataKey="value"
+                    position="right"
+                    style={{ fill: AXIS_COLOR, fontSize: 12 }}
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
+
+        <ChartCard title="Chamados registrados por usuário">
+          {byRequester.length === 0 ? (
+            <p className="text-sm text-slate-400 dark:text-slate-500">Sem dados.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={requesterChartHeight}>
+              <BarChart
+                data={byRequester}
                 layout="vertical"
                 margin={{ top: 0, right: 24, bottom: 0, left: 0 }}
               >

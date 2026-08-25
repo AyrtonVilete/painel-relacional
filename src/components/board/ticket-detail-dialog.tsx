@@ -3,10 +3,12 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ChangeEvent,
   type FormEvent,
 } from "react";
+import { clsx } from "clsx";
 import { CheckCircle2, Paperclip, Trash2, XCircle, BellRing } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -52,6 +54,7 @@ export function TicketDetailDialog({
   canApprove,
   isAdmin,
   currentUserId,
+  scrollToCommentId,
   onUpdated,
   onDeleted,
 }: {
@@ -67,6 +70,7 @@ export function TicketDetailDialog({
   canApprove: boolean;
   isAdmin: boolean;
   currentUserId: string;
+  scrollToCommentId?: string;
   onUpdated: (ticket: Tables<"tickets">) => void;
   onDeleted: (ticketId: string) => void;
 }) {
@@ -85,6 +89,14 @@ export function TicketDetailDialog({
   const [commentBody, setCommentBody] = useState("");
   const [isPostingComment, setIsPostingComment] = useState(false);
   const [postCommentError, setPostCommentError] = useState<string | null>(null);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionedMembers, setMentionedMembers] = useState<
+    { id: string; name: string }[]
+  >([]);
+  const [highlightedCommentId, setHighlightedCommentId] = useState<string | null>(
+    null
+  );
+  const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [attachments, setAttachments] = useState<AttachmentRow[] | null>(null);
   const [attachmentsError, setAttachmentsError] = useState(false);
   const [signedUrls, setSignedUrls] = useState<Map<string, string>>(new Map());
@@ -159,6 +171,20 @@ export function TicketDetailDialog({
     };
   }, [ticket.id]);
 
+  // Deep link from a notification click — once the mentioned comment is in
+  // the loaded list, scroll it into view and flash a highlight so it's easy
+  // to spot in a long thread.
+  useEffect(() => {
+    if (!scrollToCommentId || !comments) return;
+    if (!comments.some((c) => c.id === scrollToCommentId)) return;
+
+    const el = document.getElementById(`comment-${scrollToCommentId}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlightedCommentId(scrollToCommentId);
+    const timeout = setTimeout(() => setHighlightedCommentId(null), 2000);
+    return () => clearTimeout(timeout);
+  }, [scrollToCommentId, comments]);
+
   useEffect(() => {
     let cancelled = false;
     const supabase = createClient();
@@ -200,11 +226,7 @@ export function TicketDetailDialog({
     };
   }, [ticket.id]);
 
-  async function handleFileUpload(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-
+  async function uploadFile(file: File) {
     if (file.size > MAX_ATTACHMENT_BYTES) {
       setUploadError("Arquivo muito grande (máximo de 10MB)");
       return;
@@ -257,6 +279,32 @@ export function TicketDetailDialog({
     }
   }
 
+  async function handleFileUpload(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    await uploadFile(file);
+  }
+
+  // Lets a screenshot go straight from the clipboard onto the ticket
+  // without a save-to-disk detour. Only acts when the clipboard actually
+  // has image data — pasting text anywhere else in the dialog (e.g. the
+  // comment box) is untouched since there's nothing to intercept there.
+  function handlePaste(e: React.ClipboardEvent<HTMLFormElement>) {
+    const items = Array.from(e.clipboardData?.items ?? []);
+    const imageItem = items.find((item) => item.type.startsWith("image/"));
+    if (!imageItem) return;
+
+    const file = imageItem.getAsFile();
+    if (!file) return;
+
+    e.preventDefault();
+    const extension = imageItem.type.split("/")[1] || "png";
+    uploadFile(
+      new File([file], `colado-${Date.now()}.${extension}`, { type: imageItem.type })
+    );
+  }
+
   async function handlePostComment(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const body = commentBody.trim();
@@ -281,7 +329,62 @@ export function TicketDetailDialog({
 
     setComments((prev) => [...(prev ?? []), data]);
     setCommentBody("");
+
+    // Only notify names still actually present in the final text — guards
+    // against picking someone from the autocomplete and then deleting the
+    // @mention before sending — and never notify yourself.
+    const recipients = mentionedMembers.filter(
+      (m) => m.id !== currentUserId && body.includes(`@${m.name}`)
+    );
+    setMentionedMembers([]);
+
+    if (recipients.length > 0) {
+      await supabase.from("notifications").insert(
+        recipients.map((m) => ({
+          recipient_id: m.id,
+          actor_id: currentUserId,
+          ticket_id: ticket.id,
+          comment_id: data.id,
+          body_preview: body.slice(0, 140),
+        }))
+      );
+    }
   }
+
+  function handleCommentBodyChange(e: ChangeEvent<HTMLTextAreaElement>) {
+    const value = e.target.value;
+    setCommentBody(value);
+
+    const beforeCursor = value.slice(0, e.target.selectionStart ?? value.length);
+    const match = beforeCursor.match(/@(\w*)$/);
+    setMentionQuery(match ? match[1] : null);
+  }
+
+  function handleSelectMention(member: { id: string; name: string }) {
+    const textarea = commentTextareaRef.current;
+    const cursor = textarea?.selectionStart ?? commentBody.length;
+    const before = commentBody.slice(0, cursor).replace(/@(\w*)$/, `@${member.name} `);
+    const after = commentBody.slice(cursor);
+    const nextValue = before + after;
+
+    setCommentBody(nextValue);
+    setMentionedMembers((prev) =>
+      prev.some((m) => m.id === member.id) ? prev : [...prev, member]
+    );
+    setMentionQuery(null);
+
+    requestAnimationFrame(() => {
+      textarea?.focus();
+      textarea?.setSelectionRange(before.length, before.length);
+    });
+  }
+
+  const mentionOptions =
+    mentionQuery === null
+      ? []
+      : members
+          .filter((m) => m.name.toLowerCase().includes(mentionQuery.toLowerCase()))
+          .slice(0, 6);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -464,7 +567,7 @@ export function TicketDetailDialog({
       title={`Chamado #${ticket.ticket_number}`}
       className="max-w-2xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} onPaste={handlePaste} className="space-y-4">
         {error && <ErrorAlert>{error}</ErrorAlert>}
 
         <div className="flex items-center justify-between gap-3">
@@ -744,6 +847,9 @@ export function TicketDetailDialog({
             accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain,text/csv,application/json,application/zip"
           />
         </label>
+        <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500">
+          ou cole uma imagem (Ctrl+V)
+        </p>
       </div>
 
       <div className="mt-6 border-t border-slate-200 pt-5 dark:border-slate-800">
@@ -767,7 +873,13 @@ export function TicketDetailDialog({
             {comments.map((comment) => (
               <li
                 key={comment.id}
-                className="rounded-md bg-slate-50 px-3 py-2 dark:bg-slate-900"
+                id={`comment-${comment.id}`}
+                className={clsx(
+                  "rounded-md px-3 py-2 transition-colors duration-500",
+                  highlightedCommentId === comment.id
+                    ? "bg-indigo-100 dark:bg-indigo-950/60"
+                    : "bg-slate-50 dark:bg-slate-900"
+                )}
               >
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="text-sm font-medium text-slate-800 dark:text-slate-100">
@@ -787,14 +899,31 @@ export function TicketDetailDialog({
 
         <form onSubmit={handlePostComment} className="space-y-2">
           {postCommentError && <ErrorAlert>{postCommentError}</ErrorAlert>}
-          <Textarea
-            aria-label="Novo comentário"
-            rows={2}
-            maxLength={2000}
-            placeholder="Escreva um comentário..."
-            value={commentBody}
-            onChange={(e) => setCommentBody(e.target.value)}
-          />
+          <div className="relative">
+            <Textarea
+              ref={commentTextareaRef}
+              aria-label="Novo comentário"
+              rows={2}
+              maxLength={2000}
+              placeholder="Escreva um comentário... use @ pra mencionar alguém"
+              value={commentBody}
+              onChange={handleCommentBodyChange}
+            />
+            {mentionOptions.length > 0 && (
+              <div className="absolute left-0 top-full z-20 mt-1 w-64 rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-800 dark:bg-slate-900">
+                {mentionOptions.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => handleSelectMention(m)}
+                    className="block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+                  >
+                    {m.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="flex justify-end">
             <Button
               type="submit"

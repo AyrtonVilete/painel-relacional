@@ -430,19 +430,6 @@ export function KanbanBoard({
           <div className="flex items-center gap-1.5">
             <button
               type="button"
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-indigo-600 transition-colors hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60 dark:text-indigo-400 dark:hover:bg-indigo-950/40"
-            >
-              <RefreshCw
-                className={clsx("h-3.5 w-3.5", isRefreshing && "animate-spin")}
-                aria-hidden
-              />
-              Atualizar
-            </button>
-
-            <button
-              type="button"
               onClick={handleExportCsv}
               disabled={visibleTickets.length === 0}
               className={clsx(
@@ -580,6 +567,19 @@ export function KanbanBoard({
               className="w-36"
             />
           </div>
+
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            <RefreshCw
+              className={clsx("h-4 w-4", isRefreshing && "animate-spin")}
+              aria-hidden
+            />
+            Atualizar
+          </button>
         </div>
       </div>
 

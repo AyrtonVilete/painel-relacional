@@ -17,7 +17,7 @@ export async function getCurrentMembership() {
   // role as your own.
   const { data } = await supabase
     .from("memberships")
-    .select("role, organization_id, organizations(name)")
+    .select("role, organization_id, organizations(name, logo_url)")
     .eq("user_id", user.id)
     .maybeSingle();
 

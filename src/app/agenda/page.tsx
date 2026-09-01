@@ -79,6 +79,7 @@ export default async function AgendaPage() {
     <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-950">
       <AppHeader
         orgName={membership.organizations?.name ?? "Painel Relacional"}
+        orgLogoUrl={membership.organizations?.logo_url}
         userEmail={user?.email}
         role={membership.role}
         isAdmin={membership.role === "admin"}

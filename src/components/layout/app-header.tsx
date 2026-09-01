@@ -8,6 +8,7 @@ import { NotificationBell } from "@/components/layout/notification-bell";
 
 export function AppHeader({
   orgName,
+  orgLogoUrl,
   userEmail,
   role,
   isAdmin,
@@ -16,6 +17,7 @@ export function AppHeader({
   membersById,
 }: {
   orgName: string;
+  orgLogoUrl?: string | null;
   userEmail: string | undefined;
   role: string | null;
   isAdmin: boolean;
@@ -27,7 +29,18 @@ export function AppHeader({
     <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
       <div className="mx-auto flex max-w-[100rem] flex-wrap items-center justify-between gap-3 px-6 py-4">
         <div className="flex items-center gap-2.5">
-          <LogoMark />
+          {orgLogoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- arbitrary
+            // admin-supplied URL, can't be pre-registered in next.config's
+            // remotePatterns for next/image.
+            <img
+              src={orgLogoUrl}
+              alt={orgName}
+              className="h-8 w-8 rounded-lg object-cover"
+            />
+          ) : (
+            <LogoMark />
+          )}
           <div>
             <p className="text-sm font-semibold leading-none text-slate-900 dark:text-slate-100">
               {orgName}

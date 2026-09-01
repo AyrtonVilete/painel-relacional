@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
+  Building2,
   Users,
   UserPlus,
   Tag,
@@ -17,6 +18,7 @@ import { getCurrentMembership } from "@/lib/org/get-current-membership";
 export const dynamic = "force-dynamic";
 
 const NAV_ITEMS = [
+  { href: "/settings/organization", label: "Organização", icon: Building2 },
   { href: "/settings/members", label: "Membros", icon: UserPlus },
   { href: "/settings/clients", label: "Clientes", icon: Users },
   { href: "/settings/ticket-types", label: "Tipos de chamado", icon: Tag },

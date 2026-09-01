@@ -1,9 +1,9 @@
-import { clsx } from "clsx";
+import { cn } from "@/lib/utils/cn";
 
 export function LogoMark({ className }: { className?: string }) {
   return (
     <div
-      className={clsx(
+      className={cn(
         "flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600",
         className
       )}

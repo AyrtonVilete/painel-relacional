@@ -109,6 +109,7 @@ export default async function BoardPage({
     <div className="flex h-screen flex-col bg-slate-50 dark:bg-slate-950">
       <AppHeader
         orgName={membership.organizations?.name ?? "Painel Relacional"}
+        orgLogoUrl={membership.organizations?.logo_url}
         userEmail={user?.email}
         role={membership.role}
         isAdmin={isAdmin}

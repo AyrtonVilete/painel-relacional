@@ -38,11 +38,13 @@ export function AgendaCalendar({
   meetings,
   ticketDeadlines,
   currentUserId,
+  membersById,
   isAdmin,
 }: {
   meetings: Meeting[];
   ticketDeadlines: TicketDeadline[];
   currentUserId: string;
+  membersById: Map<string, string>;
   isAdmin: boolean;
 }) {
   const [viewMonth, setViewMonth] = useState(() => startOfMonth(new Date()));
@@ -172,17 +174,25 @@ export function AgendaCalendar({
               </div>
 
               <div className="flex flex-col gap-1">
-                {dayMeetings.map((meeting) => (
-                  <button
-                    key={meeting.id}
-                    type="button"
-                    onClick={() => setDialogState({ mode: "edit", meeting })}
-                    title={meeting.title}
-                    className="truncate rounded bg-indigo-100 px-1.5 py-0.5 text-left text-xs font-medium text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-950 dark:text-indigo-300 dark:hover:bg-indigo-900"
-                  >
-                    {meeting.start_time.slice(0, 5)} {meeting.title}
-                  </button>
-                ))}
+                {dayMeetings.map((meeting) => {
+                  const creatorName = membersById.get(meeting.created_by) ?? "Sem nome";
+                  return (
+                    <button
+                      key={meeting.id}
+                      type="button"
+                      onClick={() => setDialogState({ mode: "edit", meeting })}
+                      title={`${meeting.title} — ${creatorName}`}
+                      className="rounded bg-indigo-100 px-1.5 py-0.5 text-left leading-tight hover:bg-indigo-200 dark:bg-indigo-950 dark:hover:bg-indigo-900"
+                    >
+                      <p className="truncate text-xs font-medium text-indigo-700 dark:text-indigo-300">
+                        {meeting.start_time.slice(0, 5)} {meeting.title}
+                      </p>
+                      <p className="truncate text-[11px] text-indigo-500 dark:text-indigo-400">
+                        {creatorName}
+                      </p>
+                    </button>
+                  );
+                })}
                 {dayDeadlines.map((deadline) => (
                   <div
                     key={deadline.id}

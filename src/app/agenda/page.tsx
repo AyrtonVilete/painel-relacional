@@ -99,6 +99,7 @@ export default async function AgendaPage() {
           meetings={meetings ?? []}
           ticketDeadlines={ticketDeadlines}
           currentUserId={user?.id ?? ""}
+          membersById={membersById}
           isAdmin={membership.role === "admin"}
         />
       </main>

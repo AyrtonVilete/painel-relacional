@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { KanbanSquare, LayoutDashboard, LogOut, Settings } from "lucide-react";
+import { Calendar, KanbanSquare, LayoutDashboard, LogOut, Settings } from "lucide-react";
 import { logout } from "@/lib/auth/actions";
 import { LogoMark } from "@/components/brand/logo-mark";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ export function AppHeader({
   userEmail: string | undefined;
   role: string | null;
   isAdmin: boolean;
-  active: "board" | "dashboard";
+  active: "board" | "dashboard" | "agenda";
   currentUserId: string;
   membersById: Map<string, string>;
 }) {
@@ -50,6 +50,12 @@ export function AppHeader({
             <Button variant={active === "dashboard" ? "primary" : "secondary"}>
               <LayoutDashboard className="h-4 w-4" aria-hidden />
               Dashboard
+            </Button>
+          </Link>
+          <Link href="/agenda">
+            <Button variant={active === "agenda" ? "primary" : "secondary"}>
+              <Calendar className="h-4 w-4" aria-hidden />
+              Agenda
             </Button>
           </Link>
           {isAdmin && (

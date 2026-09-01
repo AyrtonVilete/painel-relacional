@@ -14,7 +14,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { Search, X, Download } from "lucide-react";
+import { Search, X, Download, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Column } from "@/components/board/column";
 import { FilterChip } from "@/components/board/filter-chip";
@@ -87,6 +87,7 @@ export function KanbanBoard({
   const [scrollToCommentId, setScrollToCommentId] = useState<string | undefined>(
     undefined
   );
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Deep link from a notification click (/board?ticket=..&comment=..). This
   // fires on first mount (fresh page load with the params already in the
@@ -289,6 +290,28 @@ export function KanbanBoard({
     setCreatedTo(DEFAULT_BOARD_FILTERS.createdTo);
   }
 
+  // Tickets live in local state seeded once from initialTickets — other
+  // people creating/moving tickets never reach this tab on their own (no
+  // realtime subscription), so this refetches straight from the browser
+  // client and re-seeds state, same pattern as every other board mutation
+  // here, instead of router.refresh() (which wouldn't update this
+  // already-mounted component's state anyway).
+  async function handleRefresh() {
+    setIsRefreshing(true);
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("tickets")
+      .select("*")
+      .eq("board_id", boardId);
+
+    if (error) {
+      showToast("Não foi possível atualizar os chamados. Tente novamente.");
+    } else if (data) {
+      setTickets(data);
+    }
+    setIsRefreshing(false);
+  }
+
   function handleExportCsv() {
     const csv = ticketsToCsv(visibleTickets, {
       statusesById,
@@ -405,6 +428,19 @@ export function KanbanBoard({
           </p>
 
           <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-indigo-600 transition-colors hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60 dark:text-indigo-400 dark:hover:bg-indigo-950/40"
+            >
+              <RefreshCw
+                className={clsx("h-3.5 w-3.5", isRefreshing && "animate-spin")}
+                aria-hidden
+              />
+              Atualizar
+            </button>
+
             <button
               type="button"
               onClick={handleExportCsv}

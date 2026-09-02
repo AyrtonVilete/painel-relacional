@@ -26,7 +26,7 @@ export default async function StatusesPage() {
   const { data: statuses } = board
     ? await supabase
         .from("statuses")
-        .select("id, name, is_terminal, is_denied, is_awaiting_approval")
+        .select("id, name, is_terminal, is_denied, is_awaiting_approval, is_approved")
         .eq("board_id", board.id)
         .order("order", { ascending: true })
     : { data: [] };
@@ -45,9 +45,11 @@ export default async function StatusesPage() {
           chamado concluído (usado para calcular tempo de resolução e
           throughput no dashboard), marque uma coluna como &ldquo;coluna de
           negados&rdquo; para poder usar o botão &ldquo;Negar&rdquo; nos
-          chamados, e marque qual coluna representa &ldquo;aguardando
+          chamados, marque qual coluna representa &ldquo;aguardando
           aprovação&rdquo; (define se o card mostra o Prazo previsto pra
-          aprovação ou a Execução prevista).
+          aprovação ou a Execução prevista), e marque uma coluna como
+          &ldquo;coluna de aprovados&rdquo; para que o botão
+          &ldquo;Aprovar&rdquo; mova o chamado pra lá automaticamente.
         </p>
       </div>
 

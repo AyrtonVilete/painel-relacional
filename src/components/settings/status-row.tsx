@@ -12,6 +12,7 @@ import {
 import { StatusTerminalToggle } from "@/components/settings/status-terminal-toggle";
 import { StatusDeniedToggle } from "@/components/settings/status-denied-toggle";
 import { StatusAwaitingApprovalToggle } from "@/components/settings/status-awaiting-approval-toggle";
+import { StatusApprovedToggle } from "@/components/settings/status-approved-toggle";
 
 const iconButtonClass =
   "rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-slate-800 dark:hover:text-slate-200";
@@ -27,6 +28,7 @@ export function StatusRow({
     is_terminal: boolean;
     is_denied: boolean;
     is_awaiting_approval: boolean;
+    is_approved: boolean;
   };
   isFirst: boolean;
   isLast: boolean;
@@ -149,6 +151,9 @@ export function StatusRow({
           statusId={status.id}
           defaultChecked={status.is_awaiting_approval}
         />
+      </td>
+      <td className="px-3 py-3 text-right">
+        <StatusApprovedToggle statusId={status.id} defaultChecked={status.is_approved} />
       </td>
       <td className="w-12 px-3 py-3 text-right">
         <button

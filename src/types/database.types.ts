@@ -625,6 +625,7 @@ export type Database = {
           board_id: string
           created_at: string
           id: string
+          is_approved: boolean
           is_awaiting_approval: boolean
           is_denied: boolean
           is_terminal: boolean
@@ -635,6 +636,7 @@ export type Database = {
           board_id: string
           created_at?: string
           id?: string
+          is_approved?: boolean
           is_awaiting_approval?: boolean
           is_denied?: boolean
           is_terminal?: boolean
@@ -645,6 +647,7 @@ export type Database = {
           board_id?: string
           created_at?: string
           id?: string
+          is_approved?: boolean
           is_awaiting_approval?: boolean
           is_denied?: boolean
           is_terminal?: boolean

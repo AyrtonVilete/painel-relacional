@@ -77,7 +77,6 @@ export function TicketDetailDialog({
   const [isSaving, setIsSaving] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [showApproveForm, setShowApproveForm] = useState(false);
-  const [executionDateInput, setExecutionDateInput] = useState("");
   const [isDenying, setIsDenying] = useState(false);
   const [isMarkingFollowup, setIsMarkingFollowup] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -113,6 +112,14 @@ export function TicketDetailDialog({
   // render (nothing sensible to route the ticket to yet).
   const deniedStatus = useMemo(
     () => statuses.find((s) => s.is_denied),
+    [statuses]
+  );
+  // Set by an admin in /settings/statuses ("coluna de aprovados") — same
+  // opt-in-with-fallback design as deniedStatus. If unconfigured, Aprovar
+  // still flips `approved` + execution_deadline, it just doesn't move the
+  // card anywhere (nothing sensible to route it to yet).
+  const approvedStatus = useMemo(
+    () => statuses.find((s) => s.is_approved),
     [statuses]
   );
   const currentStatus = useMemo(
@@ -466,18 +473,31 @@ export function TicketDetailDialog({
     onClose();
   }
 
-  // Execution deadline is captured right here instead of left as a normal
-  // form field — while it's known, it's more likely to get filled in this
-  // way than left for someone to remember separately afterward. It's
-  // optional though: some tickets get approved before a start date is
-  // known, and that shouldn't block approval — it can be set later from
-  // the Execução prevista field below.
+  // Deliberately doesn't touch execution_deadline — that's set later from
+  // the Execução prevista field in the main form, not captured inline here.
   async function handleApprove() {
     setIsApproving(true);
     const supabase = createClient();
+
+    // Routed through move_ticket first (not folded into the .update() below)
+    // so the column change logs to ticket_history like any other move —
+    // same reason handleDeny does this instead of a plain status_id update.
+    if (approvedStatus && ticket.status_id !== approvedStatus.id) {
+      const { error: moveError } = await supabase.rpc("move_ticket", {
+        p_ticket_id: ticket.id,
+        p_new_status_id: approvedStatus.id,
+      });
+
+      if (moveError) {
+        setIsApproving(false);
+        setError("Não foi possível mover o chamado para a coluna de aprovados");
+        return;
+      }
+    }
+
     const { data, error: approveError } = await supabase
       .from("tickets")
-      .update({ approved: true, execution_deadline: executionDateInput || null })
+      .update({ approved: true })
       .eq("id", ticket.id)
       .select()
       .single();
@@ -584,24 +604,12 @@ export function TicketDetailDialog({
 
           {showApproveForm ? (
             <div className="flex items-center gap-2">
-              <Input
-                type="date"
-                autoFocus
-                value={executionDateInput}
-                onChange={(e) => setExecutionDateInput(e.target.value)}
-                aria-label="Execução prevista (opcional)"
-                placeholder="Opcional"
-                className="w-40"
-              />
-              <Button type="button" isLoading={isApproving} onClick={handleApprove}>
+              <Button type="button" autoFocus isLoading={isApproving} onClick={handleApprove}>
                 Confirmar aprovação
               </Button>
               <button
                 type="button"
-                onClick={() => {
-                  setShowApproveForm(false);
-                  setExecutionDateInput("");
-                }}
+                onClick={() => setShowApproveForm(false)}
                 className="text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
               >
                 Cancelar

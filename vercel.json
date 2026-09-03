@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/pdvnet-sync",
-      "schedule": "*/30 * * * *"
+      "schedule": "0 9 * * *"
     }
   ]
 }

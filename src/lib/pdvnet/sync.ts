@@ -64,7 +64,11 @@ async function fetchIds(): Promise<number[]> {
   const tagClause = PDVNET_CUSTOMER_TAGS.map(
     (tag) => `[System.Tags] CONTAINS '${tag}'`
   ).join(" OR ");
-  const query = `SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '${project}' AND (${tagClause}) ORDER BY [System.ChangedDate] DESC`;
+  // Also pulls in anything with Custom.Chamado filled in, tagged or not —
+  // that's the field ticket-to-DevOps cross-referencing keys off
+  // (linkAdoDataToTickets), so a freshly-escalated item with no business
+  // tag yet still needs to be in this table for that to find it.
+  const query = `SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '${project}' AND ((${tagClause}) OR [Custom.Chamado] <> '') ORDER BY [System.ChangedDate] DESC`;
 
   const res = await fetch(
     `https://dev.azure.com/${org}/${project}/_apis/wit/wiql?api-version=7.1`,
@@ -156,4 +160,109 @@ export async function syncPdvnetTickets(): Promise<{ synced: number }> {
   }
 
   return { synced: rows.length };
+}
+
+// Cross-references our own tickets against what's now in pdvnet_tickets by
+// ticket_number == Custom.Chamado — the same "chamado" number the
+// relationship team already uses is what gets embedded in Azure DevOps'
+// Custom.Chamado field once an item is escalated there. When DevOps has a
+// developer (Custom.DevOwner) and a committed date (Custom.CommitedDate)
+// for a matching chamado, that fills in our ticket's developer_id/
+// execution_deadline — but only fields that are still empty on our side,
+// so a manual edit already made in Painel Relacional is never overwritten.
+export async function linkAdoDataToTickets(): Promise<{
+  linkedTickets: number;
+  developersCreated: number;
+}> {
+  const supabase = createAdminClient();
+
+  const [{ data: tickets, error: ticketsError }, { data: adoTickets, error: adoError }] =
+    await Promise.all([
+      supabase
+        .from("tickets")
+        .select("id, ticket_number, developer_id, execution_deadline")
+        .eq("organization_id", NEXUS_ORG_ID),
+      supabase
+        .from("pdvnet_tickets")
+        .select("chamado, dev_owner, committed_date")
+        .eq("organization_id", NEXUS_ORG_ID)
+        .not("chamado", "is", null)
+        .not("dev_owner", "is", null)
+        .not("committed_date", "is", null),
+    ]);
+
+  if (ticketsError) throw new Error(`Fetching tickets failed: ${ticketsError.message}`);
+  if (adoError) throw new Error(`Fetching pdvnet_tickets failed: ${adoError.message}`);
+
+  const adoByChamado = new Map<number, { devOwner: string; committedDate: string }>();
+  for (const t of adoTickets ?? []) {
+    if (t.chamado === null || !t.dev_owner || !t.committed_date) continue;
+    adoByChamado.set(t.chamado, { devOwner: t.dev_owner, committedDate: t.committed_date });
+  }
+
+  const candidates = (tickets ?? []).filter((t) => {
+    const match = adoByChamado.get(t.ticket_number);
+    if (!match) return false;
+    return t.developer_id === null || t.execution_deadline === null;
+  });
+
+  if (candidates.length === 0) {
+    return { linkedTickets: 0, developersCreated: 0 };
+  }
+
+  const { data: existingDevelopers, error: developersError } = await supabase
+    .from("developers")
+    .select("id, name")
+    .eq("organization_id", NEXUS_ORG_ID);
+  if (developersError) {
+    throw new Error(`Fetching developers failed: ${developersError.message}`);
+  }
+
+  const developerIdByName = new Map(
+    (existingDevelopers ?? []).map((d) => [d.name.trim().toLowerCase(), d.id])
+  );
+
+  let developersCreated = 0;
+  let linkedTickets = 0;
+
+  for (const ticket of candidates) {
+    const match = adoByChamado.get(ticket.ticket_number);
+    if (!match) continue;
+
+    const update: { developer_id?: string; execution_deadline?: string } = {};
+
+    if (ticket.developer_id === null) {
+      const key = match.devOwner.trim().toLowerCase();
+      let developerId = developerIdByName.get(key);
+      if (!developerId) {
+        const { data: newDeveloper, error: insertError } = await supabase
+          .from("developers")
+          .insert({ organization_id: NEXUS_ORG_ID, name: match.devOwner.trim() })
+          .select("id")
+          .single();
+        if (insertError || !newDeveloper) {
+          throw new Error(`Creating developer failed: ${insertError?.message}`);
+        }
+        developerId = newDeveloper.id;
+        developerIdByName.set(key, developerId);
+        developersCreated += 1;
+      }
+      update.developer_id = developerId;
+    }
+
+    if (ticket.execution_deadline === null) {
+      update.execution_deadline = match.committedDate.slice(0, 10);
+    }
+
+    const { error: updateError } = await supabase
+      .from("tickets")
+      .update(update)
+      .eq("id", ticket.id);
+    if (updateError) {
+      throw new Error(`Updating ticket ${ticket.id} failed: ${updateError.message}`);
+    }
+    linkedTickets += 1;
+  }
+
+  return { linkedTickets, developersCreated };
 }

@@ -1,4 +1,4 @@
-import { syncPdvnetTickets } from "@/lib/pdvnet/sync";
+import { linkAdoDataToTickets, syncPdvnetTickets } from "@/lib/pdvnet/sync";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -18,8 +18,9 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await syncPdvnetTickets();
-    return Response.json({ ok: true, ...result });
+    const syncResult = await syncPdvnetTickets();
+    const linkResult = await linkAdoDataToTickets();
+    return Response.json({ ok: true, ...syncResult, ...linkResult });
   } catch (error) {
     console.error("[pdvnet-sync] failed", error);
     return Response.json(

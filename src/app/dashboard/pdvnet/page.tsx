@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { AppHeader } from "@/components/layout/app-header";
 import { getCurrentMembership } from "@/lib/org/get-current-membership";
 import { NEXUS_ORG_ID } from "@/lib/pdvnet/constants";
-import { computePdvnetStats } from "@/lib/pdvnet/compute-stats";
 import { PdvnetCharts } from "@/components/dashboard/pdvnet-charts";
 
 // Per-user data, same caching caveat as /board and /dashboard.
@@ -50,8 +49,6 @@ export default async function PdvnetDashboardPage() {
     (memberProfiles ?? []).map((p) => [p.id, p.full_name ?? "Sem nome"])
   );
 
-  const stats = computePdvnetStats(tickets ?? []);
-
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-950">
       <AppHeader
@@ -77,7 +74,7 @@ export default async function PdvnetDashboardPage() {
           </p>
         </div>
 
-        <PdvnetCharts stats={stats} />
+        <PdvnetCharts tickets={tickets ?? []} />
       </main>
     </div>
   );

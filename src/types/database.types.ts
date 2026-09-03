@@ -529,6 +529,86 @@ export type Database = {
         }
         Relationships: []
       }
+      pdvnet_tickets: {
+        Row: {
+          ado_id: number
+          approved_date: string | null
+          assigned_to: string | null
+          chamado: number | null
+          changed_date: string | null
+          cliente: string | null
+          closed_date: string | null
+          committed_date: string | null
+          created_date: string | null
+          dev_owner: string | null
+          id: string
+          organization_id: string
+          priority: number | null
+          qa_date: string | null
+          qa_owner: string | null
+          sistema: string | null
+          state: string
+          synced_at: string
+          tags: string[]
+          title: string
+          work_item_type: string
+        }
+        Insert: {
+          ado_id: number
+          approved_date?: string | null
+          assigned_to?: string | null
+          chamado?: number | null
+          changed_date?: string | null
+          cliente?: string | null
+          closed_date?: string | null
+          committed_date?: string | null
+          created_date?: string | null
+          dev_owner?: string | null
+          id?: string
+          organization_id: string
+          priority?: number | null
+          qa_date?: string | null
+          qa_owner?: string | null
+          sistema?: string | null
+          state: string
+          synced_at?: string
+          tags?: string[]
+          title: string
+          work_item_type: string
+        }
+        Update: {
+          ado_id?: number
+          approved_date?: string | null
+          assigned_to?: string | null
+          chamado?: number | null
+          changed_date?: string | null
+          cliente?: string | null
+          closed_date?: string | null
+          committed_date?: string | null
+          created_date?: string | null
+          dev_owner?: string | null
+          id?: string
+          organization_id?: string
+          priority?: number | null
+          qa_date?: string | null
+          qa_owner?: string | null
+          sistema?: string | null
+          state?: string
+          synced_at?: string
+          tags?: string[]
+          title?: string
+          work_item_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdvnet_tickets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pending_invites: {
         Row: {
           created_at: string

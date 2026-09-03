@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/pdvnet-sync",
+      "schedule": "*/30 * * * *"
+    }
+  ]
+}

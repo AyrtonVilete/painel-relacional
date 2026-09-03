@@ -8,6 +8,7 @@ const PUBLIC_PATHS = [
   "/auth/callback",
   "/invite",
   "/api/notifications",
+  "/api/cron",
 ];
 // /signup/confirmar-email matches the /signup prefix above, so no separate
 // entry is needed — kept here as a note for discoverability.
@@ -17,6 +18,9 @@ const PUBLIC_PATHS = [
 // check below. Without this, the redirect-to-/login response below hits a
 // GET-only page with the original POST method preserved (NextResponse
 // .redirect defaults to a 307), which Next.js answers with 405.
+// /api/cron is called server-to-server by Vercel Cron, same reasoning —
+// its own Authorization: Bearer CRON_SECRET check stands in for the
+// cookie-session check below.
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });

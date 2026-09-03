@@ -244,6 +244,7 @@ export default async function DashboardPage() {
       <AppHeader
         orgName={membership.organizations?.name ?? "Painel Relacional"}
         orgLogoUrl={membership.organizations?.logo_url}
+        organizationId={membership.organization_id}
         userEmail={user?.email}
         role={membership.role}
         isAdmin={membership.role === "admin"}

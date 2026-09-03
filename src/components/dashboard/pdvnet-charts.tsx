@@ -50,11 +50,52 @@ const AGING_COLORS: Record<string, string> = {
   "90+ dias": "#ef4444",
 };
 
-const tooltipStyle = {
-  fontSize: 13,
-  borderRadius: 8,
-  border: "1px solid #e2e8f0",
-};
+// Recharts' Tooltip renders its `contentStyle` as plain inline CSS, which
+// can't respond to Tailwind's `dark:` variant — using it left the tooltip
+// box hardcoded white with text inheriting the page's dark-mode color,
+// making it unreadable (white-on-white). A custom `content` component
+// rendered with real Tailwind classes fixes this for both themes, same
+// discipline as every other element in this app.
+function ChartTooltipContent({
+  active,
+  payload,
+  label,
+  formatter,
+}: {
+  active?: boolean;
+  payload?: { name?: string; value?: number | string; color?: string }[];
+  label?: string;
+  formatter?: (value: number | string, name: string) => [string, string];
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg dark:border-slate-700 dark:bg-slate-800">
+      {label !== undefined && label !== "" && (
+        <p className="mb-1 font-medium text-slate-700 dark:text-slate-200">{label}</p>
+      )}
+      {payload.map((entry, i) => {
+        const [displayValue, displayName] = formatter
+          ? formatter(entry.value ?? "", entry.name ?? "")
+          : [String(entry.value ?? ""), entry.name ?? ""];
+        return (
+          <p key={i} className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+            {entry.color && (
+              <span
+                className="inline-block h-2 w-2 shrink-0 rounded-full"
+                style={{ backgroundColor: entry.color }}
+                aria-hidden
+              />
+            )}
+            <span>
+              {displayName}: <span className="font-medium text-slate-900 dark:text-slate-100">{displayValue}</span>
+            </span>
+          </p>
+        );
+      })}
+    </div>
+  );
+}
 
 function StatTile({
   label,
@@ -103,7 +144,7 @@ function RankedBarChart({ data }: { data: { name: string; value: number }[] }) {
       <BarChart data={data} layout="vertical" margin={{ left: 24 }}>
         <XAxis type="number" allowDecimals={false} stroke={AXIS_COLOR} fontSize={12} />
         <YAxis type="category" dataKey="name" stroke={AXIS_COLOR} fontSize={12} width={140} />
-        <Tooltip contentStyle={tooltipStyle} />
+        <Tooltip content={<ChartTooltipContent />} />
         <Bar dataKey="value" fill={BRAND_COLOR} radius={[0, 4, 4, 0]} name="Abertos" />
       </BarChart>
     </ResponsiveContainer>
@@ -243,7 +284,7 @@ export function PdvnetCharts({ tickets }: { tickets: Tables<"pdvnet_tickets">[] 
               <BarChart data={stats.byTag}>
                 <XAxis dataKey="name" stroke={AXIS_COLOR} fontSize={12} />
                 <YAxis allowDecimals={false} stroke={AXIS_COLOR} fontSize={12} />
-                <Tooltip contentStyle={tooltipStyle} />
+                <Tooltip content={<ChartTooltipContent />} />
                 <Legend />
                 <Bar dataKey="aberto" stackId="a" fill={OPEN_COLOR} name="Aberto" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="fechado" stackId="a" fill={CLOSED_COLOR} name="Fechado" />
@@ -305,7 +346,7 @@ export function PdvnetCharts({ tickets }: { tickets: Tables<"pdvnet_tickets">[] 
               <BarChart data={stats.agingBuckets}>
                 <XAxis dataKey="name" stroke={AXIS_COLOR} fontSize={12} />
                 <YAxis allowDecimals={false} stroke={AXIS_COLOR} fontSize={12} />
-                <Tooltip contentStyle={tooltipStyle} />
+                <Tooltip content={<ChartTooltipContent />} />
                 <Bar dataKey="value" radius={[4, 4, 0, 0]} name="Chamados">
                   {stats.agingBuckets.map((bucket) => (
                     <Cell key={bucket.name} fill={AGING_COLORS[bucket.name]} />
@@ -338,8 +379,11 @@ export function PdvnetCharts({ tickets }: { tickets: Tables<"pdvnet_tickets">[] 
                 <XAxis type="number" stroke={AXIS_COLOR} fontSize={12} unit="d" />
                 <YAxis type="category" dataKey="name" stroke={AXIS_COLOR} fontSize={12} width={140} />
                 <Tooltip
-                  contentStyle={tooltipStyle}
-                  formatter={(value) => [formatResolutionDays(Number(value)), "Tempo médio"]}
+                  content={
+                    <ChartTooltipContent
+                      formatter={(value) => [formatResolutionDays(Number(value)), "Tempo médio"]}
+                    />
+                  }
                 />
                 <Bar dataKey="days" fill={BRAND_COLOR} radius={[0, 4, 4, 0]} name="Dias" />
               </BarChart>
@@ -352,7 +396,10 @@ export function PdvnetCharts({ tickets }: { tickets: Tables<"pdvnet_tickets">[] 
             <BarChart data={stats.weeklyTrend} margin={{ top: 16, right: 0, bottom: 0, left: 0 }}>
               <XAxis dataKey="name" tick={{ fontSize: 12, fill: AXIS_COLOR }} axisLine={false} tickLine={false} />
               <YAxis type="number" allowDecimals={false} hide />
-              <Tooltip cursor={{ fill: "rgba(148, 163, 184, 0.1)" }} contentStyle={tooltipStyle} />
+              <Tooltip
+                cursor={{ fill: "rgba(148, 163, 184, 0.1)" }}
+                content={<ChartTooltipContent />}
+              />
               <Legend wrapperStyle={{ fontSize: 12 }} />
               <Bar dataKey="criados" name="Criados" fill={CREATED_COLOR} radius={[4, 4, 0, 0]} maxBarSize={20} />
               <Bar dataKey="fechados" name="Fechados" fill={RESOLVED_COLOR} radius={[4, 4, 0, 0]} maxBarSize={20} />

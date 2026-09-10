@@ -52,6 +52,11 @@ export function AgendaCalendar({
     { mode: "create"; date: string } | { mode: "edit"; meeting: Meeting } | null
   >(null);
 
+  const members = useMemo(
+    () => Array.from(membersById, ([id, name]) => ({ id, name })),
+    [membersById]
+  );
+
   const meetingsByDay = useMemo(() => {
     const map = new Map<string, Meeting[]>();
     for (const meeting of meetings) {
@@ -219,6 +224,7 @@ export function AgendaCalendar({
             dialogState.meeting.created_by === currentUserId ||
             isAdmin
           }
+          members={members}
         />
       )}
     </div>

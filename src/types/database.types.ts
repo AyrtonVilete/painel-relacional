@@ -461,9 +461,10 @@ export type Database = {
           comment_id: string | null
           created_at: string
           id: string
+          meeting_id: string | null
           read_at: string | null
           recipient_id: string
-          ticket_id: string
+          ticket_id: string | null
         }
         Insert: {
           actor_id?: string | null
@@ -471,9 +472,10 @@ export type Database = {
           comment_id?: string | null
           created_at?: string
           id?: string
+          meeting_id?: string | null
           read_at?: string | null
           recipient_id: string
-          ticket_id: string
+          ticket_id?: string | null
         }
         Update: {
           actor_id?: string | null
@@ -481,9 +483,10 @@ export type Database = {
           comment_id?: string | null
           created_at?: string
           id?: string
+          meeting_id?: string | null
           read_at?: string | null
           recipient_id?: string
-          ticket_id?: string
+          ticket_id?: string | null
         }
         Relationships: [
           {
@@ -494,10 +497,49 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "notifications_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "notifications_ticket_id_fkey"
             columns: ["ticket_id"]
             isOneToOne: false
             referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_participants: {
+        Row: {
+          added_by: string
+          created_at: string
+          id: string
+          meeting_id: string
+          user_id: string
+        }
+        Insert: {
+          added_by: string
+          created_at?: string
+          id?: string
+          meeting_id: string
+          user_id: string
+        }
+        Update: {
+          added_by?: string
+          created_at?: string
+          id?: string
+          meeting_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_participants_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
             referencedColumns: ["id"]
           },
         ]

@@ -96,6 +96,13 @@ export function NotificationBell({
   function handleNotificationClick(n: NotificationRow) {
     markRead([n.id]);
     setIsOpen(false);
+
+    if (n.meeting_id) {
+      router.push("/agenda");
+      return;
+    }
+    if (!n.ticket_id) return;
+
     const params = new URLSearchParams({ ticket: n.ticket_id });
     if (n.comment_id) params.set("comment", n.comment_id);
     router.push(`/board?${params.toString()}`);
@@ -137,7 +144,8 @@ export function NotificationBell({
                   )}
                 >
                   <p className="font-medium text-slate-800 dark:text-slate-100">
-                    {(n.actor_id && membersById.get(n.actor_id)) || "Alguém"} mencionou você
+                    {(n.actor_id && membersById.get(n.actor_id)) || "Alguém"}{" "}
+                    {n.meeting_id ? "convidou você para uma reunião" : "mencionou você"}
                   </p>
                   <p className="mt-0.5 truncate text-slate-500 dark:text-slate-400">
                     {n.body_preview}

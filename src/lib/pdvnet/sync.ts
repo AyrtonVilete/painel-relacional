@@ -47,7 +47,7 @@ type AdoFields = {
   "Custom.QADate"?: string;
 };
 
-function adoConfig() {
+export function adoConfig() {
   const org = process.env.AZURE_DEVOPS_ORG;
   const project = process.env.AZURE_DEVOPS_PROJECT;
   const pat = process.env.AZURE_DEVOPS_PAT;

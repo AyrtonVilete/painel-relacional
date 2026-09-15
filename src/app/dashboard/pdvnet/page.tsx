@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AppHeader } from "@/components/layout/app-header";
@@ -64,14 +65,22 @@ export default async function PdvnetDashboardPage() {
       />
 
       <main className="mx-auto w-full max-w-[100rem] flex-1 px-6 py-8">
-        <div className="mb-6">
-          <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-            PDVNET
-          </h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Chamados de cliente escalados pro time de desenvolvimento, sincronizados a
-            partir do Azure DevOps.
-          </p>
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+              PDVNET
+            </h1>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Chamados de cliente escalados pro time de desenvolvimento, sincronizados a
+              partir do Azure DevOps.
+            </p>
+          </div>
+          <Link
+            href="/dashboard/pdvnet/wq-surf"
+            className="inline-flex items-center rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-950/60"
+          >
+            Painel do WQ Surf →
+          </Link>
         </div>
 
         <PdvnetCharts tickets={tickets ?? []} />

@@ -14,8 +14,10 @@ import {
 import {
   AlertTriangle,
   Bell,
+  CheckCheck,
   CheckCircle2,
   Clock,
+  FolderOpen,
   TicketIcon,
   UserX,
   XCircle,
@@ -25,6 +27,14 @@ import {
 type CountDatum = { name: string; value: number };
 type UrgencyDatum = CountDatum & { urgency: "low" | "medium" | "high" | "critical" };
 type ThroughputDatum = { name: string; criados: number; resolvidos: number };
+type SlaComplianceDatum = {
+  name: string;
+  urgency: "low" | "medium" | "high" | "critical";
+  cumprido: number;
+  estourado: number;
+  total: number;
+  pct: number | null;
+};
 
 function formatResolutionDays(days: number) {
   if (days < 1) return `${Math.round(days * 24)}h`;
@@ -42,6 +52,17 @@ const URGENCY_COLORS: Record<UrgencyDatum["urgency"], string> = {
 
 const BRAND_COLOR = "#6366f1";
 const AXIS_COLOR = "#94a3b8";
+
+const SLA_COLORS = { cumprido: "#22c55e", estourado: "#ef4444" };
+
+const EXECUTION_BUCKET_COLORS: Record<string, string> = {
+  Atrasado: "#ef4444",
+  "No prazo": "#22c55e",
+  "Sem prazo definido": "#94a3b8",
+};
+function executionBucketColor(name: string) {
+  return EXECUTION_BUCKET_COLORS[name] ?? "#f59e0b"; // "Vence em até N dias"
+}
 
 function StatTile({
   label,
@@ -101,6 +122,8 @@ const tooltipStyle = {
 
 export function DashboardCharts({
   totalTickets,
+  openTickets,
+  closedTickets,
   pendingApproval,
   overdue,
   followupPending,
@@ -110,11 +133,16 @@ export function DashboardCharts({
   byStatus,
   byUrgency,
   bySprint,
+  byClient,
   throughput,
   byDeveloper,
   byRequester,
+  slaCompliance,
+  executionDeadlineBuckets,
 }: {
   totalTickets: number;
+  openTickets: number;
+  closedTickets: number;
   pendingApproval: number;
   overdue: number;
   followupPending: number;
@@ -124,19 +152,26 @@ export function DashboardCharts({
   byStatus: CountDatum[];
   byUrgency: UrgencyDatum[];
   bySprint: CountDatum[];
+  byClient: CountDatum[];
   throughput: ThroughputDatum[];
   byDeveloper: CountDatum[];
   byRequester: CountDatum[];
+  slaCompliance: SlaComplianceDatum[];
+  executionDeadlineBuckets: CountDatum[];
 }) {
   const statusChartHeight = Math.max(byStatus.length * 44, 120);
   const sprintChartHeight = Math.max(bySprint.length * 44, 120);
+  const clientChartHeight = Math.max(byClient.length * 44, 120);
   const developerChartHeight = Math.max(byDeveloper.length * 44, 120);
   const requesterChartHeight = Math.max(byRequester.length * 44, 120);
+  const executionBucketChartHeight = Math.max(executionDeadlineBuckets.length * 44, 120);
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-7">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-9">
         <StatTile label="Total de chamados" value={totalTickets} icon={TicketIcon} />
+        <StatTile label="Abertos" value={openTickets} icon={FolderOpen} />
+        <StatTile label="Fechados" value={closedTickets} icon={CheckCheck} />
         <StatTile
           label="Pendentes de aprovação"
           value={pendingApproval}
@@ -234,6 +269,129 @@ export function DashboardCharts({
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Cumprimento de cobrança por urgência">
+          {slaCompliance.every((d) => d.total === 0) ? (
+            <p className="text-sm text-slate-400 dark:text-slate-500">Sem dados.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart
+                data={slaCompliance}
+                margin={{ top: 16, right: 0, bottom: 0, left: 0 }}
+              >
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 12, fill: AXIS_COLOR }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis type="number" allowDecimals={false} hide />
+                <Tooltip
+                  cursor={{ fill: "rgba(148, 163, 184, 0.1)" }}
+                  contentStyle={tooltipStyle}
+                />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Bar
+                  dataKey="cumprido"
+                  name="Cobrança em dia"
+                  stackId="sla"
+                  fill={SLA_COLORS.cumprido}
+                  maxBarSize={56}
+                />
+                <Bar
+                  dataKey="estourado"
+                  name="Cobrança atrasada"
+                  stackId="sla"
+                  fill={SLA_COLORS.estourado}
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={56}
+                >
+                  <LabelList
+                    dataKey="pct"
+                    position="top"
+                    formatter={(value) =>
+                      value === null || value === undefined ? "" : `${value}%`
+                    }
+                    style={{ fill: AXIS_COLOR, fontSize: 12 }}
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
+
+        <ChartCard title="Distribuição de prazo de execução">
+          {executionDeadlineBuckets.every((d) => d.value === 0) ? (
+            <p className="text-sm text-slate-400 dark:text-slate-500">Sem dados.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={executionBucketChartHeight}>
+              <BarChart
+                data={executionDeadlineBuckets}
+                layout="vertical"
+                margin={{ top: 0, right: 24, bottom: 0, left: 0 }}
+              >
+                <XAxis type="number" allowDecimals={false} hide />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={140}
+                  tick={{ fontSize: 12, fill: AXIS_COLOR }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  cursor={{ fill: "rgba(148, 163, 184, 0.1)" }}
+                  contentStyle={tooltipStyle}
+                />
+                <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={24}>
+                  {executionDeadlineBuckets.map((entry) => (
+                    <Cell key={entry.name} fill={executionBucketColor(entry.name)} />
+                  ))}
+                  <LabelList
+                    dataKey="value"
+                    position="right"
+                    style={{ fill: AXIS_COLOR, fontSize: 12 }}
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
+
+        <ChartCard title="Chamados por cliente">
+          {byClient.every((d) => d.value === 0) ? (
+            <p className="text-sm text-slate-400 dark:text-slate-500">Sem dados.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={clientChartHeight}>
+              <BarChart
+                data={byClient}
+                layout="vertical"
+                margin={{ top: 0, right: 24, bottom: 0, left: 0 }}
+              >
+                <XAxis type="number" allowDecimals={false} hide />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={140}
+                  tick={{ fontSize: 12, fill: AXIS_COLOR }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  cursor={{ fill: "rgba(148, 163, 184, 0.1)" }}
+                  contentStyle={tooltipStyle}
+                />
+                <Bar dataKey="value" fill={BRAND_COLOR} radius={[0, 4, 4, 0]} maxBarSize={24}>
+                  <LabelList
+                    dataKey="value"
+                    position="right"
+                    style={{ fill: AXIS_COLOR, fontSize: 12 }}
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </ChartCard>
 
         <ChartCard title="Chamados por sprint">

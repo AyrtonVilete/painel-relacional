@@ -134,6 +134,8 @@ export function PdvnetStatusPanel({
   const [clienteFilter, setClienteFilter] = useState<string[]>([]);
   const [sprintFilter, setSprintFilter] = useState<string[]>([]);
   const [chamadoQuery, setChamadoQuery] = useState("");
+  const [sprintFrom, setSprintFrom] = useState("");
+  const [sprintTo, setSprintTo] = useState("");
 
   const clienteOptions = useMemo(() => {
     const values = new Set<string>();
@@ -182,8 +184,24 @@ export function PdvnetStatusPanel({
       );
     }
 
+    // Period overlap: the sprint has to have at least one day in common
+    // with [sprintFrom, sprintTo] — not "starts inside" — so a sprint that
+    // spans across the chosen range's edges still matches. Items with no
+    // sprint (or a sprint Azure DevOps has no dates for) drop out once
+    // either bound is set, since there's nothing to compare.
+    if (sprintFrom || sprintTo) {
+      result = result.filter((item) => {
+        if (!item.sprintStartDate || !item.sprintFinishDate) return false;
+        const start = item.sprintStartDate.slice(0, 10);
+        const finish = item.sprintFinishDate.slice(0, 10);
+        if (sprintFrom && finish < sprintFrom) return false;
+        if (sprintTo && start > sprintTo) return false;
+        return true;
+      });
+    }
+
     return result;
-  }, [items, clienteFilter, sprintFilter, chamadoQuery]);
+  }, [items, clienteFilter, sprintFilter, chamadoQuery, sprintFrom, sprintTo]);
 
   const open = filteredItems.filter((i) => i.isOpen);
   const closed = filteredItems.filter((i) => !i.isOpen);
@@ -207,12 +225,18 @@ export function PdvnetStatusPanel({
     .slice(0, 10);
 
   const hasActiveFilters =
-    clienteFilter.length > 0 || sprintFilter.length > 0 || chamadoQuery.trim() !== "";
+    clienteFilter.length > 0 ||
+    sprintFilter.length > 0 ||
+    chamadoQuery.trim() !== "" ||
+    sprintFrom !== "" ||
+    sprintTo !== "";
 
   function handleClearFilters() {
     setClienteFilter([]);
     setSprintFilter([]);
     setChamadoQuery("");
+    setSprintFrom("");
+    setSprintTo("");
   }
 
   return (
@@ -261,6 +285,25 @@ export function PdvnetStatusPanel({
             onApply={setSprintFilter}
           />
         )}
+
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm text-slate-500 dark:text-slate-400">Sprint no período:</span>
+          <Input
+            type="date"
+            value={sprintFrom}
+            onChange={(e) => setSprintFrom(e.target.value)}
+            aria-label="Sprint a partir de"
+            className="w-36"
+          />
+          <span className="text-sm text-slate-400 dark:text-slate-500">até</span>
+          <Input
+            type="date"
+            value={sprintTo}
+            onChange={(e) => setSprintTo(e.target.value)}
+            aria-label="Sprint até"
+            className="w-36"
+          />
+        </div>
 
         <button
           type="button"

@@ -62,6 +62,8 @@ export type PdvnetWorkItem = {
   qaOwner: string | null;
   iterationPath: string | null;
   sprintLabel: string | null;
+  sprintStartDate: string | null;
+  sprintFinishDate: string | null;
   chamado: number | null;
   cliente: string | null;
   sistema: string | null;
@@ -79,14 +81,23 @@ export type CurrentSprint = {
   finishDate: string | null;
 } | null;
 
-async function fetchCurrentIteration(): Promise<CurrentSprint> {
+type IterationRange = { startDate: string | null; finishDate: string | null };
+
+async function fetchIterations(
+  timeframe?: "current"
+): Promise<{
+  path: string;
+  name: string;
+  attributes?: { startDate?: string; finishDate?: string };
+}[]> {
   const { org, project, authHeader } = adoConfig();
+  const qs = timeframe ? `$timeframe=${timeframe}&` : "";
 
   const res = await fetch(
-    `https://dev.azure.com/${org}/${project}/_apis/work/teamsettings/iterations?$timeframe=current&api-version=7.1`,
+    `https://dev.azure.com/${org}/${project}/_apis/work/teamsettings/iterations?${qs}api-version=7.1`,
     { headers: { Authorization: authHeader } }
   );
-  if (!res.ok) return null;
+  if (!res.ok) return [];
 
   const data = (await res.json()) as {
     value: {
@@ -95,7 +106,11 @@ async function fetchCurrentIteration(): Promise<CurrentSprint> {
       attributes?: { startDate?: string; finishDate?: string };
     }[];
   };
-  const iteration = data.value?.[0];
+  return data.value ?? [];
+}
+
+async function fetchCurrentIteration(): Promise<CurrentSprint> {
+  const iteration = (await fetchIterations("current"))[0];
   if (!iteration) return null;
 
   return {
@@ -106,7 +121,25 @@ async function fetchCurrentIteration(): Promise<CurrentSprint> {
   };
 }
 
-async function fetchCustomerFacingWorkItems(): Promise<PdvnetWorkItem[]> {
+// Every sprint's date range (past and future), keyed by iteration path —
+// lets the panel filter by calendar period instead of only by picking
+// individual sprint names one by one out of 60+ of them.
+async function fetchIterationRanges(): Promise<Map<string, IterationRange>> {
+  const iterations = await fetchIterations();
+  return new Map(
+    iterations.map((it) => [
+      it.path,
+      {
+        startDate: it.attributes?.startDate ?? null,
+        finishDate: it.attributes?.finishDate ?? null,
+      },
+    ])
+  );
+}
+
+async function fetchCustomerFacingWorkItems(
+  iterationRanges: Map<string, IterationRange>
+): Promise<PdvnetWorkItem[]> {
   const { org, project, authHeader } = adoConfig();
 
   const tagClause = PDVNET_CUSTOMER_TAGS.map(
@@ -164,6 +197,7 @@ async function fetchCustomerFacingWorkItems(): Promise<PdvnetWorkItem[]> {
     const isOpen = !PDVNET_CLOSED_STATES.includes(state);
     const targetDate = f["Microsoft.VSTS.Scheduling.TargetDate"] ?? null;
     const iterationPath = f["System.IterationPath"] ?? null;
+    const range = iterationPath ? iterationRanges.get(iterationPath) : undefined;
 
     return {
       id: f["System.Id"],
@@ -184,6 +218,8 @@ async function fetchCustomerFacingWorkItems(): Promise<PdvnetWorkItem[]> {
       sprintLabel: iterationPath && iterationPath !== project
         ? iterationPath.split("\\").pop() ?? null
         : null,
+      sprintStartDate: range?.startDate ?? null,
+      sprintFinishDate: range?.finishDate ?? null,
       chamado: f["Custom.Chamado"] ?? null,
       cliente: f["Custom.Cliente"]?.trim() || null,
       sistema: f["Custom.Sistema"] ?? null,
@@ -197,10 +233,11 @@ async function fetchCustomerFacingWorkItems(): Promise<PdvnetWorkItem[]> {
 }
 
 export async function getPdvnetPanelData() {
-  const [currentSprint, items] = await Promise.all([
+  const [currentSprint, iterationRanges] = await Promise.all([
     fetchCurrentIteration(),
-    fetchCustomerFacingWorkItems(),
+    fetchIterationRanges(),
   ]);
+  const items = await fetchCustomerFacingWorkItems(iterationRanges);
 
   return {
     currentSprint,

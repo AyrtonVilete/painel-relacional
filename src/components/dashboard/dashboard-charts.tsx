@@ -114,11 +114,49 @@ function ChartCard({
   );
 }
 
-const tooltipStyle = {
-  fontSize: 13,
-  borderRadius: 8,
-  border: "1px solid #e2e8f0",
-};
+// Recharts' Tooltip renders its `contentStyle` as plain inline CSS, which
+// can't respond to Tailwind's `dark:` variant — using it left the tooltip
+// box hardcoded white with text inheriting the page's dark-mode color,
+// making it unreadable (white-on-white). Same fix already applied to
+// pdvnet-charts.tsx: a custom `content` component with real Tailwind
+// classes instead.
+function ChartTooltipContent({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: { name?: string; value?: number | string; color?: string }[];
+  label?: string;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg dark:border-slate-700 dark:bg-slate-800">
+      {label !== undefined && label !== "" && (
+        <p className="mb-1 font-medium text-slate-700 dark:text-slate-200">{label}</p>
+      )}
+      {payload.map((entry, i) => (
+        <p key={i} className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+          {entry.color && (
+            <span
+              className="inline-block h-2 w-2 shrink-0 rounded-full"
+              style={{ backgroundColor: entry.color }}
+              aria-hidden
+            />
+          )}
+          <span>
+            {entry.name}
+            {entry.name ? ": " : ""}
+            <span className="font-medium text-slate-900 dark:text-slate-100">
+              {entry.value}
+            </span>
+          </span>
+        </p>
+      ))}
+    </div>
+  );
+}
 
 export function DashboardCharts({
   totalTickets,
@@ -229,7 +267,7 @@ export function DashboardCharts({
                 />
                 <Tooltip
                   cursor={{ fill: "rgba(148, 163, 184, 0.1)" }}
-                  contentStyle={tooltipStyle}
+                  content={<ChartTooltipContent />}
                 />
                 <Bar dataKey="value" fill={BRAND_COLOR} radius={[0, 4, 4, 0]} maxBarSize={24}>
                   <LabelList
@@ -255,7 +293,7 @@ export function DashboardCharts({
               <YAxis type="number" allowDecimals={false} hide />
               <Tooltip
                 cursor={{ fill: "rgba(148, 163, 184, 0.1)" }}
-                contentStyle={tooltipStyle}
+                content={<ChartTooltipContent />}
               />
               <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={56}>
                 {byUrgency.map((entry) => (
@@ -289,7 +327,7 @@ export function DashboardCharts({
                 <YAxis type="number" allowDecimals={false} hide />
                 <Tooltip
                   cursor={{ fill: "rgba(148, 163, 184, 0.1)" }}
-                  contentStyle={tooltipStyle}
+                  content={<ChartTooltipContent />}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar
@@ -342,7 +380,7 @@ export function DashboardCharts({
                 />
                 <Tooltip
                   cursor={{ fill: "rgba(148, 163, 184, 0.1)" }}
-                  contentStyle={tooltipStyle}
+                  content={<ChartTooltipContent />}
                 />
                 <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={24}>
                   {executionDeadlineBuckets.map((entry) => (
@@ -380,7 +418,7 @@ export function DashboardCharts({
                 />
                 <Tooltip
                   cursor={{ fill: "rgba(148, 163, 184, 0.1)" }}
-                  contentStyle={tooltipStyle}
+                  content={<ChartTooltipContent />}
                 />
                 <Bar dataKey="value" fill={BRAND_COLOR} radius={[0, 4, 4, 0]} maxBarSize={24}>
                   <LabelList
@@ -415,7 +453,7 @@ export function DashboardCharts({
                 />
                 <Tooltip
                   cursor={{ fill: "rgba(148, 163, 184, 0.1)" }}
-                  contentStyle={tooltipStyle}
+                  content={<ChartTooltipContent />}
                 />
                 <Bar dataKey="value" fill={BRAND_COLOR} radius={[0, 4, 4, 0]} maxBarSize={24}>
                   <LabelList
@@ -450,7 +488,7 @@ export function DashboardCharts({
                 />
                 <Tooltip
                   cursor={{ fill: "rgba(148, 163, 184, 0.1)" }}
-                  contentStyle={tooltipStyle}
+                  content={<ChartTooltipContent />}
                 />
                 <Bar dataKey="value" fill={BRAND_COLOR} radius={[0, 4, 4, 0]} maxBarSize={24}>
                   <LabelList
@@ -485,7 +523,7 @@ export function DashboardCharts({
                 />
                 <Tooltip
                   cursor={{ fill: "rgba(148, 163, 184, 0.1)" }}
-                  contentStyle={tooltipStyle}
+                  content={<ChartTooltipContent />}
                 />
                 <Bar dataKey="value" fill={BRAND_COLOR} radius={[0, 4, 4, 0]} maxBarSize={24}>
                   <LabelList
@@ -511,7 +549,7 @@ export function DashboardCharts({
               <YAxis type="number" allowDecimals={false} hide />
               <Tooltip
                 cursor={{ fill: "rgba(148, 163, 184, 0.1)" }}
-                contentStyle={tooltipStyle}
+                content={<ChartTooltipContent />}
               />
               <Legend wrapperStyle={{ fontSize: 12 }} />
               <Bar

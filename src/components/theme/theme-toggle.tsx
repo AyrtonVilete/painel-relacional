@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 import { clsx } from "clsx";
-import { THEME_STORAGE_KEY } from "@/lib/theme/script";
+import { THEME_COOKIE_KEY } from "@/lib/theme/script";
 
 export function ThemeToggle({ className }: { className?: string }) {
   const [theme, setTheme] = useState<"light" | "dark" | null>(null);
@@ -15,7 +15,10 @@ export function ThemeToggle({ className }: { className?: string }) {
   function toggle() {
     const next = theme === "dark" ? "light" : "dark";
     document.documentElement.classList.toggle("dark", next === "dark");
-    localStorage.setItem(THEME_STORAGE_KEY, next);
+    // A cookie (not localStorage) so the server can render the right class
+    // on the very next request, for every page — no flash, no dependence
+    // on a client script running before paint.
+    document.cookie = `${THEME_COOKIE_KEY}=${next}; path=/; max-age=31536000; SameSite=Lax`;
     setTheme(next);
   }
 

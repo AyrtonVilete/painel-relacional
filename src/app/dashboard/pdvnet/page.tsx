@@ -76,10 +76,10 @@ export default async function PdvnetDashboardPage() {
             </p>
           </div>
           <Link
-            href="/dashboard/pdvnet/wq-surf"
+            href="/dashboard/pdvnet/status"
             className="inline-flex items-center rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-950/60"
           >
-            Painel do WQ Surf →
+            Acompanhamento por cliente →
           </Link>
         </div>
 

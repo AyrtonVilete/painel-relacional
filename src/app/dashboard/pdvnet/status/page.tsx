@@ -5,15 +5,18 @@ import { createClient } from "@/lib/supabase/server";
 import { AppHeader } from "@/components/layout/app-header";
 import { getCurrentMembership } from "@/lib/org/get-current-membership";
 import { NEXUS_ORG_ID } from "@/lib/pdvnet/constants";
-import { getClientPanelData } from "@/lib/pdvnet/client-panel";
-import { ClientPanel } from "@/components/dashboard/client-panel";
+import { getPdvnetPanelData } from "@/lib/pdvnet/client-panel";
+import { PdvnetStatusPanel } from "@/components/dashboard/pdvnet-status-panel";
+import type { PdvnetPanelData } from "@/lib/pdvnet/client-panel";
 
 // Queries Azure DevOps live on every load (read-only) instead of the
 // once-daily pdvnet_tickets sync — this panel is meant for "what's
-// happening right now", so it can't be a day stale.
+// happening right now", so it can't be a day stale. Filtering by
+// cliente/sprint/chamado happens client-side in PdvnetStatusPanel against
+// this one fetch, so switching filters never re-hits Azure DevOps.
 export const dynamic = "force-dynamic";
 
-export default async function WqSurfPanelPage() {
+export default async function PdvnetStatusPage() {
   const supabase = await createClient();
 
   const {
@@ -31,10 +34,10 @@ export default async function WqSurfPanelPage() {
     redirect("/dashboard");
   }
 
-  let data;
+  let data: PdvnetPanelData | null = null;
   let loadError: string | null = null;
   try {
-    data = await getClientPanelData("WQ Surf");
+    data = await getPdvnetPanelData();
   } catch (error) {
     loadError =
       error instanceof Error ? error.message : "Erro desconhecido ao consultar o Azure DevOps";
@@ -58,11 +61,11 @@ export default async function WqSurfPanelPage() {
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-              WQ Surf — Acompanhamento
+              Acompanhamento por cliente
             </h1>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Chamados do Azure DevOps para o cliente WQ Surf, consultados ao vivo (somente
-              leitura).
+              Chamados do Azure DevOps, consultados ao vivo (somente leitura) — filtre por
+              cliente, sprint ou número do chamado.
             </p>
           </div>
           <Link
@@ -79,7 +82,7 @@ export default async function WqSurfPanelPage() {
             Não foi possível consultar o Azure DevOps agora: {loadError}
           </div>
         ) : (
-          data && <ClientPanel data={data} />
+          data && <PdvnetStatusPanel items={data.items} currentSprint={data.currentSprint} />
         )}
       </main>
     </div>

@@ -1,12 +1,15 @@
 import "server-only";
 import { adoConfig } from "@/lib/pdvnet/sync";
-import { PDVNET_CLOSED_STATES } from "@/lib/pdvnet/constants";
+import { PDVNET_CLOSED_STATES, PDVNET_CUSTOMER_TAGS } from "@/lib/pdvnet/constants";
 
-// Live, read-only view for a single client's current work — unlike
+// Live, read-only view of every customer-facing chamado — unlike
 // pdvnet_tickets (synced once daily by cron, for the broad analytics
 // dashboard), this queries Azure DevOps directly on every page load so
 // "what are we on right now" is always fresh. Never issues anything but a
 // GET or a read-only WIQL/batch query — no write endpoint is ever called.
+// Scope mirrors sync.ts's fetchIds exactly (tagged OR has a Custom.Chamado)
+// so this shows the same "customer-facing" set as the rest of PDVNET, not
+// the ~1100 QA/internal work items sharing the same Azure DevOps project.
 const FIELDS = [
   "System.Id",
   "System.Title",
@@ -47,7 +50,7 @@ type AdoFields = {
   "Custom.QAOwner"?: AdoIdentity;
 };
 
-export type ClientWorkItem = {
+export type PdvnetWorkItem = {
   id: number;
   title: string;
   workItemType: string;
@@ -60,6 +63,7 @@ export type ClientWorkItem = {
   iterationPath: string | null;
   sprintLabel: string | null;
   chamado: number | null;
+  cliente: string | null;
   sistema: string | null;
   targetDate: string | null;
   changedDate: string | null;
@@ -102,10 +106,13 @@ async function fetchCurrentIteration(): Promise<CurrentSprint> {
   };
 }
 
-async function fetchClientWorkItems(clienteQuery: string): Promise<ClientWorkItem[]> {
+async function fetchCustomerFacingWorkItems(): Promise<PdvnetWorkItem[]> {
   const { org, project, authHeader } = adoConfig();
-  const escaped = clienteQuery.replace(/'/g, "''");
-  const query = `SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '${project}' AND [Custom.Cliente] CONTAINS '${escaped}' ORDER BY [System.ChangedDate] DESC`;
+
+  const tagClause = PDVNET_CUSTOMER_TAGS.map(
+    (tag) => `[System.Tags] CONTAINS '${tag}'`
+  ).join(" OR ");
+  const query = `SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '${project}' AND ((${tagClause}) OR [Custom.Chamado] <> '') ORDER BY [System.ChangedDate] DESC`;
 
   const wiqlRes = await fetch(
     `https://dev.azure.com/${org}/${project}/_apis/wit/wiql?api-version=7.1`,
@@ -123,24 +130,33 @@ async function fetchClientWorkItems(clienteQuery: string): Promise<ClientWorkIte
   const ids = wiqlData.workItems.map((w) => w.id);
   if (ids.length === 0) return [];
 
-  const items: AdoFields[] = [];
+  const chunks: number[][] = [];
   for (let i = 0; i < ids.length; i += 200) {
-    const chunk = ids.slice(i, i + 200);
-    const batchRes = await fetch(
-      `https://dev.azure.com/${org}/${project}/_apis/wit/workitemsbatch?api-version=7.1`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: authHeader },
-        body: JSON.stringify({ ids: chunk, fields: FIELDS }),
-      }
-    );
-    if (!batchRes.ok) {
-      throw new Error(`Batch fetch failed: ${batchRes.status} ${await batchRes.text()}`);
-    }
-    const batchData = (await batchRes.json()) as { value: { fields: AdoFields }[] };
-    items.push(...batchData.value.map((v) => v.fields));
+    chunks.push(ids.slice(i, i + 200));
   }
 
+  // Independent chunks, fetched in parallel — this scope runs to 700+ items
+  // (vs. ~50 for a single client), so a sequential loop here would make the
+  // page noticeably slower to load.
+  const batches = await Promise.all(
+    chunks.map(async (chunk) => {
+      const batchRes = await fetch(
+        `https://dev.azure.com/${org}/${project}/_apis/wit/workitemsbatch?api-version=7.1`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: authHeader },
+          body: JSON.stringify({ ids: chunk, fields: FIELDS }),
+        }
+      );
+      if (!batchRes.ok) {
+        throw new Error(`Batch fetch failed: ${batchRes.status} ${await batchRes.text()}`);
+      }
+      const batchData = (await batchRes.json()) as { value: { fields: AdoFields }[] };
+      return batchData.value.map((v) => v.fields);
+    })
+  );
+
+  const items = batches.flat();
   const today = new Date().toISOString().slice(0, 10);
 
   return items.map((f) => {
@@ -169,6 +185,7 @@ async function fetchClientWorkItems(clienteQuery: string): Promise<ClientWorkIte
         ? iterationPath.split("\\").pop() ?? null
         : null,
       chamado: f["Custom.Chamado"] ?? null,
+      cliente: f["Custom.Cliente"]?.trim() || null,
       sistema: f["Custom.Sistema"] ?? null,
       targetDate,
       changedDate: f["System.ChangedDate"] ?? null,
@@ -179,46 +196,17 @@ async function fetchClientWorkItems(clienteQuery: string): Promise<ClientWorkIte
   });
 }
 
-export async function getClientPanelData(clienteQuery: string) {
+export async function getPdvnetPanelData() {
   const [currentSprint, items] = await Promise.all([
     fetchCurrentIteration(),
-    fetchClientWorkItems(clienteQuery),
+    fetchCustomerFacingWorkItems(),
   ]);
-
-  const open = items.filter((i) => i.isOpen);
-  const closed = items.filter((i) => !i.isOpen);
-  const inCurrentSprint = currentSprint
-    ? open.filter((i) => i.iterationPath === currentSprint.path)
-    : [];
-  const overdue = open.filter((i) => i.isOverdue);
-
-  // Current-sprint work first, then whatever's most urgent (earliest
-  // deadline) — items with no prazo defined sort last within their group.
-  const sortedOpen = [...open].sort((a, b) => {
-    const aInSprint = currentSprint && a.iterationPath === currentSprint.path ? 0 : 1;
-    const bInSprint = currentSprint && b.iterationPath === currentSprint.path ? 0 : 1;
-    if (aInSprint !== bInSprint) return aInSprint - bInSprint;
-    if (a.targetDate && b.targetDate) return a.targetDate.localeCompare(b.targetDate);
-    if (a.targetDate) return -1;
-    if (b.targetDate) return 1;
-    return (b.changedDate ?? "").localeCompare(a.changedDate ?? "");
-  });
-
-  const recentlyClosed = [...closed]
-    .sort((a, b) => (b.closedDate ?? "").localeCompare(a.closedDate ?? ""))
-    .slice(0, 10);
 
   return {
     currentSprint,
-    total: items.length,
-    totalOpen: open.length,
-    totalClosed: closed.length,
-    inCurrentSprintCount: inCurrentSprint.length,
-    overdueCount: overdue.length,
-    openItems: sortedOpen,
-    recentlyClosed,
+    items,
     fetchedAt: new Date().toISOString(),
   };
 }
 
-export type ClientPanelData = Awaited<ReturnType<typeof getClientPanelData>>;
+export type PdvnetPanelData = Awaited<ReturnType<typeof getPdvnetPanelData>>;

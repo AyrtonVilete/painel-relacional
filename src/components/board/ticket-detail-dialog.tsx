@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -9,7 +10,7 @@ import {
   type FormEvent,
 } from "react";
 import { clsx } from "clsx";
-import { CheckCircle2, Paperclip, Trash2, XCircle, BellRing } from "lucide-react";
+import { CheckCircle2, Paperclip, Send, Trash2, XCircle, BellRing } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +26,8 @@ import {
   RequesterSelect,
 } from "@/components/board/ticket-select-fields";
 import { createClient } from "@/lib/supabase/client";
+import { CobrancaDialog } from "@/components/board/cobranca-dialog";
+import { NEXUS_ORG_ID } from "@/lib/pdvnet/constants";
 import { parseTicketFormFields } from "@/lib/tickets/parse-ticket-form";
 import type { Tables } from "@/types/database.types";
 
@@ -79,6 +82,10 @@ export function TicketDetailDialog({
   const [showApproveForm, setShowApproveForm] = useState(false);
   const [isDenying, setIsDenying] = useState(false);
   const [isMarkingFollowup, setIsMarkingFollowup] = useState(false);
+  const [showCobranca, setShowCobranca] = useState(false);
+  // Stable identity: Dialog re-runs its focus/keyboard setup whenever onClose
+  // changes, which would steal focus from the textarea on every re-render.
+  const closeCobranca = useCallback(() => setShowCobranca(false), []);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryRow[] | null>(null);
@@ -581,6 +588,7 @@ export function TicketDetailDialog({
   }
 
   return (
+    <>
     <Dialog
       open
       onClose={onClose}
@@ -650,6 +658,18 @@ export function TicketDetailDialog({
                 >
                   <BellRing className="h-4 w-4" aria-hidden />
                   Marquei a cobrança
+                </Button>
+              )}
+            {ticket.organization_id === NEXUS_ORG_ID &&
+              !currentStatus?.is_terminal &&
+              !currentStatus?.is_denied && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setShowCobranca(true)}
+                >
+                  <Send className="h-4 w-4" aria-hidden />
+                  Gerar cobrança
                 </Button>
               )}
             {isAdmin && (
@@ -1009,5 +1029,15 @@ export function TicketDetailDialog({
         )}
       </div>
     </Dialog>
+    {/* A sibling, not a child: React submit events bubble through portals, so
+        nested inside the ticket form it would also trigger that form's save. */}
+    {showCobranca && (
+      <CobrancaDialog
+        ticketId={ticket.id}
+        ticketNumber={ticket.ticket_number}
+        onClose={closeCobranca}
+      />
+    )}
+    </>
   );
 }

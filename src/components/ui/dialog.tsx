@@ -10,6 +10,11 @@ const FOCUSABLE_SELECTOR =
 const FORM_FIELD_SELECTOR =
   "textarea:not([disabled]), input:not([disabled]), select:not([disabled])";
 
+// Open dialogs, oldest first. Only the topmost one reacts to Escape/Tab, so a
+// dialog opened from inside another one (e.g. "Gerar cobrança" from the
+// ticket detail) doesn't also close/trap focus for the one underneath it.
+const openDialogStack: symbol[] = [];
+
 export function Dialog({
   open,
   onClose,
@@ -29,6 +34,10 @@ export function Dialog({
 
   useEffect(() => {
     if (!open) return;
+
+    const dialogId = Symbol("dialog");
+    openDialogStack.push(dialogId);
+    const previousOverflow = document.body.style.overflow;
 
     previouslyFocused.current = document.activeElement as HTMLElement | null;
     const panel = panelRef.current;
@@ -59,6 +68,8 @@ export function Dialog({
     (alreadyFocusedInPanel ?? firstFormField ?? firstFocusable ?? panel)?.focus();
 
     function onKeyDown(e: KeyboardEvent) {
+      if (openDialogStack[openDialogStack.length - 1] !== dialogId) return;
+
       if (e.key === "Escape") {
         onClose();
         return;
@@ -87,7 +98,11 @@ export function Dialog({
     document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = "";
+      const index = openDialogStack.indexOf(dialogId);
+      if (index !== -1) openDialogStack.splice(index, 1);
+      // Restore what it was, not "": a dialog still open underneath needs
+      // the page to stay locked.
+      document.body.style.overflow = previousOverflow;
       previouslyFocused.current?.focus();
     };
   }, [open, onClose]);

@@ -1,3 +1,4 @@
+import { syncExecutionDeadlinesFromAdo } from "@/lib/pdvnet/execution-deadlines";
 import { linkAdoDataToTickets, syncPdvnetTickets } from "@/lib/pdvnet/sync";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,18 @@ export async function GET(request: Request) {
   try {
     const syncResult = await syncPdvnetTickets();
     const linkResult = await linkAdoDataToTickets();
-    return Response.json({ ok: true, ...syncResult, ...linkResult });
+    // Runs after linkAdoDataToTickets on purpose: that one only fills an
+    // empty execution_deadline (from Custom.CommitedDate); this one then
+    // makes the DevOps forecast date (TargetDate) authoritative.
+    const deadlines = await syncExecutionDeadlinesFromAdo();
+    return Response.json({
+      ok: true,
+      ...syncResult,
+      ...linkResult,
+      deadlinesChecked: deadlines.checked,
+      deadlinesMatched: deadlines.matched,
+      deadlinesUpdated: deadlines.changes.length,
+    });
   } catch (error) {
     console.error("[pdvnet-sync] failed", error);
     return Response.json(

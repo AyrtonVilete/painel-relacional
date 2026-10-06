@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { notifyAccessRequest } from "@/lib/platform/notify-access-request";
 
 export type ActionState = { error?: string } | undefined;
 
@@ -31,7 +32,9 @@ export async function login(
     return { error: "E-mail ou senha incorretos" };
   }
 
-  redirect("/board");
+  // Routes by approval status (and creates the organization of someone
+  // approved who has never logged in since).
+  redirect("/acesso/continuar");
 }
 
 const signupSchema = z.object({
@@ -89,27 +92,14 @@ export async function signup(
     };
   }
 
-  if (data.session) {
-    // Only reached if email confirmation is ever disabled on this project
-    // (it's enabled today, so signUp normally returns no session here and
-    // /auth/callback does the bootstrap instead once the user confirms).
-    // Kept as a fallback so this path still works correctly if that
-    // project setting changes.
-    const { error: rpcError } = await supabase.rpc(
-      "create_organization_with_admin",
-      { org_name: orgName, org_slug: orgSlug }
-    );
+  await notifyAccessRequest({ fullName, orgName, email });
 
-    if (rpcError) {
-      return {
-        error: "Conta criada, mas houve um erro ao configurar a organização.",
-      };
-    }
-
-    redirect("/board");
-  }
-
-  redirect("/signup/confirmar-email");
+  // The organization is NOT created here anymore: nothing exists for this
+  // person until a platform admin approves them in /plataforma, and
+  // /acesso/continuar creates it at that point. A session only comes back
+  // when this project has email confirmation off; either way they land on a
+  // screen that says the access is pending.
+  redirect(data.session ? "/aguardando-aprovacao" : "/signup/confirmar-email");
 }
 
 export async function logout() {

@@ -75,7 +75,7 @@ export default function LoginPage() {
           href="/signup"
           className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
         >
-          Criar organização
+          Solicitar acesso
         </Link>
       </p>
     </AuthShell>

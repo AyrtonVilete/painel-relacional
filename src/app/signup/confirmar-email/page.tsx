@@ -5,7 +5,7 @@ export default function ConfirmarEmailPage() {
   return (
     <AuthShell
       headline="Quase lá."
-      description="Assim que você confirmar o e-mail, sua organização é criada automaticamente e você já pode começar a usar o painel."
+      description="Confirme o e-mail para concluir o pedido. O acesso só é liberado depois que um administrador da plataforma aprovar."
     >
       <div className="flex flex-col items-center text-center">
         <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 dark:bg-indigo-950/40">
@@ -15,8 +15,9 @@ export default function ConfirmarEmailPage() {
           Confirme seu e-mail
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-          Enviamos um link de confirmação para o e-mail informado. Abra-o
-          para ativar sua conta e finalizar a criação da organização.
+          Enviamos um link de confirmação para o e-mail informado. Depois de
+          confirmar, seu pedido segue para aprovação e você é avisado ao
+          entrar.
         </p>
       </div>
     </AuthShell>

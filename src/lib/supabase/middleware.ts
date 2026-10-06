@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isAccessApproved } from "@/lib/auth/access";
 import type { Database } from "@/types/database.types";
 
 const PUBLIC_PATHS = [
@@ -10,6 +11,10 @@ const PUBLIC_PATHS = [
   "/api/notifications",
   "/api/cron",
 ];
+// The only places a signed-in-but-unapproved user may be: the waiting
+// screen, and /acesso/continuar, which sends them there (or onward once
+// approved).
+const UNAPPROVED_ALLOWED_PATHS = ["/aguardando-aprovacao", "/acesso"];
 // /signup/confirmar-email matches the /signup prefix above, so no separate
 // entry is needed — kept here as a note for discoverability.
 // /api/notifications is called server-to-server by a Supabase database
@@ -57,6 +62,19 @@ export async function updateSession(request: NextRequest) {
   if (!user && !isPublicPath) {
     const redirectUrl = new URL("/login", request.url);
     return NextResponse.redirect(redirectUrl);
+  }
+
+  // Signed in but not approved yet: nothing in the product is reachable
+  // except the "waiting" screens. Checked against getUser() above (a live
+  // call to Auth, not the cached JWT), so approving or revoking someone
+  // takes effect on their very next request.
+  if (
+    user &&
+    !isPublicPath &&
+    !isAccessApproved(user) &&
+    !UNAPPROVED_ALLOWED_PATHS.some((path) => request.nextUrl.pathname.startsWith(path))
+  ) {
+    return NextResponse.redirect(new URL("/aguardando-aprovacao", request.url));
   }
 
   if (user && (request.nextUrl.pathname === "/login" || request.nextUrl.pathname === "/signup")) {

@@ -14,7 +14,7 @@ function SubmitButton() {
 
   return (
     <Button type="submit" isLoading={pending} className="w-full">
-      {pending ? "Criando conta..." : "Criar organização"}
+      {pending ? "Enviando pedido..." : "Solicitar acesso"}
     </Button>
   );
 }
@@ -27,15 +27,15 @@ export default function SignupPage() {
 
   return (
     <AuthShell
-      headline="Crie a organização da sua equipe em menos de um minuto."
-      description="Você começa como administrador, com um quadro inicial já configurado e pronto para receber os primeiros chamados."
+      headline="Peça acesso ao Painel Relacional."
+      description="Por segurança, cada novo acesso é analisado e liberado manualmente. Assim que for aprovado, sua organização é criada e você começa como administrador."
     >
       <div className="mb-8">
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-          Criar organização
+          Solicitar acesso
         </h1>
         <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
-          Você será o administrador da sua organização
+          Seu pedido será analisado antes da liberação
         </p>
       </div>
 

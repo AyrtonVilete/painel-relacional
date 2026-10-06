@@ -68,7 +68,7 @@ export async function inviteMember(
     .maybeSingle();
 
   const admin = createAdminClient();
-  const { error } = await admin.auth.admin.inviteUserByEmail(
+  const { data: invited, error } = await admin.auth.admin.inviteUserByEmail(
     parsed.data.email,
     {
       redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/invite/set-password`,
@@ -79,13 +79,36 @@ export async function inviteMember(
     }
   );
 
-  if (error) {
+  if (error || !invited?.user) {
     await supabase.from("pending_invites").delete().eq("id", pendingInvite.id);
     return {
-      error: error.message.includes("already been registered")
+      error: error?.message.includes("already been registered")
         ? "Este e-mail já está cadastrado"
         : "Não foi possível enviar o convite",
     };
+  }
+
+  // Someone an org admin invited by name is trusted, so they skip the
+  // platform approval that self-registered accounts need. Set on the
+  // service-role channel (app_metadata), so the invitee can't alter it.
+  const { error: approveError } = await admin.auth.admin.updateUserById(
+    invited.user.id,
+    {
+      app_metadata: {
+        access_approved: true,
+        approved_via: "invite",
+        approved_by: user?.id,
+        approved_at: new Date().toISOString(),
+      },
+    }
+  );
+
+  if (approveError) {
+    // Without the flag the invitee would be stuck on the waiting screen, so
+    // undo the whole invite rather than leave a half-created account.
+    await admin.auth.admin.deleteUser(invited.user.id);
+    await supabase.from("pending_invites").delete().eq("id", pendingInvite.id);
+    return { error: "Não foi possível enviar o convite" };
   }
 
   revalidatePath("/settings/members");

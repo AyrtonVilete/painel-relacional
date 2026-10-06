@@ -142,6 +142,11 @@ export async function sendCobrancaToDiscord(
       : []),
   ];
 
+  // Leads with the chamado's type ("Sugestão - #123 título", "Solicitação - …")
+  // for both the embed title and the forum post name; "Cobrança" only as a
+  // fallback when the chamado has no type set.
+  const heading = `${type?.name ?? "Cobrança"} - #${ticket.ticket_number} ${ticket.title}`;
+
   const pdvnetUrl = `${PDVNET_TICKET_URL}/${ticket.ticket_number}`;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
   const painelUrl =
@@ -154,7 +159,7 @@ export async function sendCobrancaToDiscord(
   ].join(" · ");
 
   const embed = {
-    title: truncate(`Cobrança — #${ticket.ticket_number} ${ticket.title}`, 256),
+    title: truncate(heading, 256),
     // Clicking the title also goes straight to the chamado in PDVNET.
     url: pdvnetUrl,
     description: `${links}\n\n${
@@ -174,7 +179,7 @@ export async function sendCobrancaToDiscord(
     timeZone: "America/Sao_Paulo",
   }).format(new Date());
   const threadName = truncate(
-    `Cobrança #${ticket.ticket_number} — ${ticket.title}`,
+    heading,
     100 - ` (${today})`.length
   ).concat(` (${today})`);
 

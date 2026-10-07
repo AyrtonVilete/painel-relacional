@@ -5,6 +5,7 @@ import { clsx } from "clsx";
 import { AlertTriangle } from "lucide-react";
 import { UrgencyBadge } from "@/components/board/urgency-badge";
 import { effectiveFollowupDue, localToday } from "@/lib/followup/due";
+import { formatApprovedAt } from "@/lib/tickets/approval-date";
 import type { Tables } from "@/types/database.types";
 
 function formatDate(value: string) {
@@ -175,11 +176,19 @@ export function TicketCard({
         </p>
       )}
 
-      {isAwaitingApproval && ticket.deadline && (
+      {/* A concluded chamado no longer counts down to a date: it shows when
+          it was concluded instead (or nothing, when that wasn't recorded). */}
+      {isTerminal && ticket.completed_at && (
+        <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+          Concluído em {formatApprovedAt(ticket.completed_at).split(" ")[0]}
+        </p>
+      )}
+
+      {!isTerminal && isAwaitingApproval && ticket.deadline && (
         <DateBadge label="Prazo" date={ticket.deadline} />
       )}
 
-      {!isAwaitingApproval && ticket.execution_deadline && (
+      {!isTerminal && !isAwaitingApproval && ticket.execution_deadline && (
         <DateBadge label="Execução prevista" date={ticket.execution_deadline} />
       )}
 

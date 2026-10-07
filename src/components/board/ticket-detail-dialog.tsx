@@ -615,11 +615,24 @@ export function TicketDetailDialog({
                     : ""}
                 </span>
               )}
+              {/* Same: stamped by the database (or the DevOps sync). */}
+              {currentStatus?.is_terminal && ticket.completed_at && (
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  · concluído em {formatApprovedAt(ticket.completed_at)}
+                </span>
+              )}
             </div>
           ) : (
-            <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-              Pendente de aprovação
-            </span>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                Pendente de aprovação
+              </span>
+              {currentStatus?.is_terminal && ticket.completed_at && (
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  · concluído em {formatApprovedAt(ticket.completed_at)}
+                </span>
+              )}
+            </div>
           )}
 
           {showApproveForm ? (
@@ -1000,7 +1013,9 @@ export function TicketDetailDialog({
             {history.map((entry) => (
               <li key={entry.id} className="text-sm text-slate-600 dark:text-slate-300">
                 <span className="font-medium text-slate-800 dark:text-slate-100">
-                  {membersById.get(entry.moved_by) ?? "Alguém"}
+                  {entry.moved_by
+                    ? membersById.get(entry.moved_by) ?? "Alguém"
+                    : "Sincronização com o DevOps"}
                 </span>{" "}
                 {entry.from_status_id !== entry.to_status_id && (
                   <>

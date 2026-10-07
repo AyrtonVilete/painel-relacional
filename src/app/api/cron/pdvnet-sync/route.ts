@@ -1,3 +1,4 @@
+import { syncCompletionFromAdo } from "@/lib/pdvnet/completion";
 import { syncExecutionDeadlinesFromAdo } from "@/lib/pdvnet/execution-deadlines";
 import { linkAdoDataToTickets, syncPdvnetTickets } from "@/lib/pdvnet/sync";
 
@@ -25,6 +26,19 @@ export async function GET(request: Request) {
     // empty execution_deadline (from Custom.CommitedDate); this one then
     // makes the DevOps forecast date (TargetDate) authoritative.
     const deadlines = await syncExecutionDeadlinesFromAdo();
+    // Last, and isolated: it needs migration 0034, and until that is applied
+    // it must not take the syncs above down with it.
+    let completion: { concluded: number[]; error?: string };
+    try {
+      const result = await syncCompletionFromAdo();
+      completion = { concluded: result.changes.map((c) => c.ticketNumber) };
+    } catch (error) {
+      console.error("[pdvnet-sync] completion step failed", error);
+      completion = {
+        concluded: [],
+        error: error instanceof Error ? error.message : "unknown error",
+      };
+    }
     return Response.json({
       ok: true,
       ...syncResult,
@@ -32,6 +46,8 @@ export async function GET(request: Request) {
       deadlinesChecked: deadlines.checked,
       deadlinesMatched: deadlines.matched,
       deadlinesUpdated: deadlines.changes.length,
+      concluded: completion.concluded,
+      ...(completion.error ? { completionError: completion.error } : {}),
     });
   } catch (error) {
     console.error("[pdvnet-sync] failed", error);

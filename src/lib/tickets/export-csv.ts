@@ -49,6 +49,7 @@ export function ticketsToCsv(
     "Criado em",
     "Aprovado em",
     "Aprovado por",
+    "Concluído em",
   ];
 
   const rows = tickets.map((t) => [
@@ -66,6 +67,7 @@ export function ticketsToCsv(
     formatDate(t.created_at),
     formatApprovedAt(t.approved_at),
     t.approved_by ? lookups.membersById.get(t.approved_by) ?? "" : "",
+    formatApprovedAt(t.completed_at),
   ]);
 
   const lines = [headers, ...rows].map((row) =>

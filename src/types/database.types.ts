@@ -865,7 +865,7 @@ export type Database = {
           from_status_id: string | null
           id: string
           moved_at: string
-          moved_by: string
+          moved_by: string | null
           ticket_id: string
           to_sprint_id: string | null
           to_status_id: string | null
@@ -875,7 +875,7 @@ export type Database = {
           from_status_id?: string | null
           id?: string
           moved_at?: string
-          moved_by: string
+          moved_by: string | null
           ticket_id: string
           to_sprint_id?: string | null
           to_status_id?: string | null
@@ -885,7 +885,7 @@ export type Database = {
           from_status_id?: string | null
           id?: string
           moved_at?: string
-          moved_by?: string
+          moved_by?: string | null
           ticket_id?: string
           to_sprint_id?: string | null
           to_status_id?: string | null
@@ -964,6 +964,7 @@ export type Database = {
           approved_by: string | null
           board_id: string
           client_id: string | null
+          completed_at: string | null
           created_at: string
           created_by: string
           deadline: string | null
@@ -987,6 +988,7 @@ export type Database = {
           approved_by?: string | null
           board_id: string
           client_id?: string | null
+          completed_at?: string | null
           created_at?: string
           created_by: string
           deadline?: string | null
@@ -1010,6 +1012,7 @@ export type Database = {
           approved_by?: string | null
           board_id?: string
           client_id?: string | null
+          completed_at?: string | null
           created_at?: string
           created_by?: string
           deadline?: string | null

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  BookOpen,
   Calendar,
   KanbanSquare,
   LayoutDashboard,
@@ -31,7 +32,7 @@ export function AppHeader({
   userEmail: string | undefined;
   role: string | null;
   isAdmin: boolean;
-  active: "board" | "dashboard" | "pdvnet" | "agenda";
+  active: "board" | "dashboard" | "pdvnet" | "agenda" | "docs";
   currentUserId: string;
   membersById: Map<string, string>;
 }) {
@@ -86,6 +87,14 @@ export function AppHeader({
               <Button variant={active === "pdvnet" ? "primary" : "secondary"}>
                 <LineChart className="h-4 w-4" aria-hidden />
                 PDVNET
+              </Button>
+            </Link>
+          )}
+          {organizationId === NEXUS_ORG_ID && (
+            <Link href="/docs">
+              <Button variant={active === "docs" ? "primary" : "secondary"}>
+                <BookOpen className="h-4 w-4" aria-hidden />
+                Docs
               </Button>
             </Link>
           )}

@@ -1,0 +1,124 @@
+/* Documentation page. Everything is scoped under .docs-root so it cannot leak
+   into the rest of the app. Light tokens on .docs-root, dark ones when the app
+   puts .dark on <html> (the same switch every other page uses). */
+.docs-root {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --fg: #0f172a;
+  --muted: #64748b;
+  --line: #e2e8f0;
+  --accent: #4f46e5;
+  --accent-soft: #eef2ff;
+  --code-bg: #f1f5f9;
+  --code-fg: #1e293b;
+  --get: #0f7a4d;
+  --get-bg: #dff5ea;
+  --post: #1d5fd1;
+  --post-bg: #e0ebfd;
+  --warn: #8a5a00;
+  --warn-bg: #fdf0d2;
+  --font-body: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, Menlo, Consolas, monospace;
+
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.65;
+}
+.dark .docs-root {
+  --bg: #020617;
+  --surface: #0f172a;
+  --fg: #e2e8f0;
+  --muted: #94a3b8;
+  --line: #1e293b;
+  --accent: #818cf8;
+  --accent-soft: #1e1b4b;
+  --code-bg: #1e293b;
+  --code-fg: #e2e8f0;
+  --get: #5fd6a0;
+  --get-bg: #12372a;
+  --post: #86b4ff;
+  --post-bg: #162b52;
+  --warn: #f0c36a;
+  --warn-bg: #3a2d10;
+}
+
+.docs-root * { box-sizing: border-box; }
+.docs-root .shell { max-width: 1120px; margin-inline: auto; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; align-items: start; padding-inline: 24px; padding-block: 32px 64px; }
+@media (max-width: 900px) { .docs-root .shell { grid-template-columns: minmax(0, 1fr); gap: 20px; padding-inline: 16px; } }
+
+.docs-root nav.toc { position: sticky; top: 24px; font-size: 13.5px; }
+.docs-root nav.toc .brand { font-weight: 700; font-size: 16px; margin: 0 0 2px; }
+.docs-root nav.toc .sub { color: var(--muted); font-size: 12.5px; margin: 0 0 16px; }
+.docs-root nav.toc ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.docs-root nav.toc a { display: block; padding: 5px 10px; border-radius: 6px; color: var(--muted); text-decoration: none; }
+.docs-root nav.toc a:hover, .docs-root nav.toc a:focus-visible { background: var(--accent-soft); color: var(--fg); outline: none; }
+.docs-root nav.toc a.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+@media (max-width: 900px) {
+  .docs-root nav.toc { position: static; }
+  .docs-root nav.toc ol { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+  .docs-root nav.toc a { border: 1px solid var(--line); background: var(--surface); }
+}
+
+.docs-root main { min-width: 0; }
+.docs-root header.top { padding-bottom: 28px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.docs-root header.top .eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 10px; }
+.docs-root h1 { font-size: clamp(30px, 5vw, 40px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; margin: 0 0 12px; text-wrap: balance; }
+.docs-root header.top p { color: var(--muted); max-width: 62ch; margin: 0 0 14px; }
+.docs-root .meta { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); }
+.docs-root .meta b { color: var(--fg); font-weight: 500; }
+
+.docs-root section { padding-block: 34px 6px; scroll-margin-top: 12px; }
+.docs-root h2 { font-size: 24px; font-weight: 650; letter-spacing: -0.01em; line-height: 1.2; margin: 0 0 14px; text-wrap: balance; }
+.docs-root h3 { font-size: 16px; margin: 26px 0 8px; font-weight: 600; }
+.docs-root p { margin: 0 0 12px; max-width: 72ch; }
+.docs-root ul { list-style: disc; margin: 0 0 14px; padding-left: 20px; max-width: 72ch; }
+.docs-root ol.plain { list-style: decimal; margin: 0 0 14px; padding-left: 22px; max-width: 72ch; }
+.docs-root li { margin-bottom: 4px; }
+.docs-root a { color: var(--accent); }
+.docs-root code { font-family: var(--font-mono); font-size: 12.8px; background: var(--code-bg); color: var(--code-fg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+
+.docs-root .code { position: relative; margin: 0 0 16px; }
+.docs-root .code pre { margin: 0; background: var(--code-bg); color: var(--code-fg); padding: 14px 16px; border-radius: 8px; overflow-x: auto; font-family: var(--font-mono); font-size: 12.8px; line-height: 1.55; }
+.docs-root .code pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
+.docs-root .code .label { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); margin: 0 0 4px; }
+.docs-root .copy { position: absolute; bottom: 8px; right: 8px; font: 500 11.5px var(--font-body); padding: 3px 9px; border-radius: 5px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); cursor: pointer; }
+.docs-root .copy:hover, .docs-root .copy:focus-visible { color: var(--fg); outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.docs-root .tbl { overflow-x: auto; margin: 0 0 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.docs-root table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+.docs-root th, .docs-root td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.docs-root tr:last-child td { border-bottom: 0; }
+.docs-root th { font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--bg); white-space: nowrap; }
+.docs-root td.nw { white-space: nowrap; }
+.docs-root .m { display: inline-block; font-family: var(--font-mono); font-size: 11.5px; font-weight: 500; padding: 1px 7px; border-radius: 4px; margin-right: 6px; }
+.docs-root .m.get { color: var(--get); background: var(--get-bg); }
+.docs-root .m.post { color: var(--post); background: var(--post-bg); }
+
+.docs-root .note { border: 1px solid var(--line); border-left: 3px solid var(--accent); background: var(--surface); padding: 12px 14px; border-radius: 6px; margin: 0 0 16px; max-width: 76ch; }
+.docs-root .note.warn { border-left-color: var(--warn); background: var(--warn-bg); }
+.docs-root .note p:last-child { margin-bottom: 0; }
+.docs-root .note strong { font-weight: 600; }
+
+.docs-root .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin: 0 0 18px; }
+.docs-root .grid > div { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 12px 14px; min-width: 0; }
+.docs-root .grid h4 { margin: 0 0 6px; font-size: 13.5px; font-weight: 600; }
+.docs-root .grid p { font-size: 13.5px; color: var(--muted); margin: 0; }
+
+.docs-root .diagram { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin: 0 0 18px; overflow-x: auto; }
+.docs-root .diagram svg { display: block; width: 100%; min-width: 640px; height: auto; }
+.docs-root .dg-node { fill: var(--bg); stroke: var(--line); stroke-width: 1.2; }
+.docs-root .dg-title { fill: var(--fg); font-size: 13.5px; font-weight: 600; font-family: var(--font-body); }
+.docs-root .dg-sub { fill: var(--muted); font-size: 11px; font-family: var(--font-body); }
+.docs-root .dg-edge { stroke: var(--muted); stroke-width: 1.4; fill: none; }
+.docs-root .dg-arrow { fill: var(--muted); }
+.docs-root .dg-label { fill: var(--muted); font-size: 11px; font-family: var(--font-mono); }
+
+.docs-root ol.flow { list-style: none; margin: 0 0 18px; padding: 0; max-width: none; display: flex; flex-wrap: wrap; gap: 8px; }
+.docs-root ol.flow li { margin: 0; display: flex; flex-direction: column; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 8px 12px; min-width: 0; }
+.docs-root ol.flow li:not(:last-child)::after { content: none; }
+.docs-root ol.flow strong { font-family: var(--font-mono); font-size: 12.5px; font-weight: 500; }
+.docs-root ol.flow span { font-size: 12px; color: var(--muted); }
+
+.docs-root footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+@media (prefers-reduced-motion: no-preference) { html:has(.docs-root) { scroll-behavior: smooth; } }

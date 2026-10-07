@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ErrorAlert } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/toast";
 import { getCobrancaOptions, sendCobrancaToDiscord } from "@/lib/discord/actions";
+import type { Tables } from "@/types/database.types";
 
 const MAX_MESSAGE = 1000;
 
@@ -16,10 +17,13 @@ export function CobrancaDialog({
   ticketId,
   ticketNumber,
   onClose,
+  onSent,
 }: {
   ticketId: string;
   ticketNumber: number;
   onClose: () => void;
+  // The chamado after the cobrança was recorded on it.
+  onSent: (ticket: Tables<"tickets">) => void;
 }) {
   const { showToast } = useToast();
   const [message, setMessage] = useState("");
@@ -53,12 +57,21 @@ export function CobrancaDialog({
     });
     setIsSending(false);
 
+    // Even a partial send counts as a cobrança made, so the chamado is
+    // refreshed whenever it was recorded.
+    if (result.ticket) onSent(result.ticket);
+
     if (result.error) {
       setError(result.error);
       return;
     }
 
-    showToast("Cobrança enviada para o Discord", "success");
+    showToast(
+      result.notMarked
+        ? "Cobrança enviada para o Discord, mas não foi possível registrá-la no chamado"
+        : "Cobrança enviada para o Discord e registrada no chamado",
+      result.notMarked ? "error" : "success"
+    );
     onClose();
   }
 
@@ -67,7 +80,7 @@ export function CobrancaDialog({
       <form onSubmit={handleSubmit} className="space-y-4">
         <p className="text-sm text-slate-500 dark:text-slate-400">
           Os dados do chamado (cliente, descrição, execução prevista, link do PDVNET) vão
-          automaticamente. Se quiser, escreva uma mensagem que aparece logo abaixo deles.
+          automaticamente. Se quiser, escreva uma mensagem que aparece logo abaixo deles. Ao enviar, a cobrança também fica registrada no chamado.
         </p>
 
         <div>

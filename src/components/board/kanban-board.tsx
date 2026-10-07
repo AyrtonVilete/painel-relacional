@@ -25,6 +25,7 @@ import { TicketDetailDialog } from "@/components/board/ticket-detail-dialog";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
 import { ticketsToCsv, downloadCsv } from "@/lib/tickets/export-csv";
+import { approvedDay } from "@/lib/tickets/approval-date";
 import {
   DEFAULT_BOARD_FILTERS,
   type BoardFilters,
@@ -77,6 +78,8 @@ export function KanbanBoard({
   const [searchQuery, setSearchQuery] = useState(initialFilters.searchQuery);
   const [createdFrom, setCreatedFrom] = useState(initialFilters.createdFrom);
   const [createdTo, setCreatedTo] = useState(initialFilters.createdTo);
+  const [approvedFrom, setApprovedFrom] = useState(initialFilters.approvedFrom);
+  const [approvedTo, setApprovedTo] = useState(initialFilters.approvedTo);
   const [activeTicket, setActiveTicket] = useState<Tables<"tickets"> | null>(
     null
   );
@@ -141,6 +144,8 @@ export function KanbanBoard({
               searchQuery,
               createdFrom,
               createdTo,
+              approvedFrom,
+              approvedTo,
             },
           },
           { onConflict: "user_id,board_id" }
@@ -160,6 +165,8 @@ export function KanbanBoard({
     searchQuery,
     createdFrom,
     createdTo,
+    approvedFrom,
+    approvedTo,
   ]);
 
   const clientsById = useMemo(
@@ -234,6 +241,22 @@ export function KanbanBoard({
       result = result.filter((t) => t.created_at.slice(0, 10) <= createdTo);
     }
 
+    // Approval date, read in Brazil time. Chamados with no recorded approval
+    // (not approved yet, or approved before the date was tracked) can't be
+    // placed in a period, so any approval-date filter leaves them out.
+    if (approvedFrom) {
+      result = result.filter((t) => {
+        const day = approvedDay(t.approved_at);
+        return day !== null && day >= approvedFrom;
+      });
+    }
+    if (approvedTo) {
+      result = result.filter((t) => {
+        const day = approvedDay(t.approved_at);
+        return day !== null && day <= approvedTo;
+      });
+    }
+
     const query = searchQuery.trim().toLowerCase();
     if (query) {
       result = result.filter((t) => {
@@ -252,6 +275,13 @@ export function KanbanBoard({
     // Most urgent first within each column — otherwise cards just sit in
     // whatever order they were fetched (registration order), burying
     // critical/high tickets under older low-priority ones.
+    // With an approval period set, the view is a report: newest approval
+    // first, and the CSV export follows the same order.
+    if (approvedFrom || approvedTo) {
+      return [...result].sort((a, b) =>
+        (b.approved_at ?? "").localeCompare(a.approved_at ?? "")
+      );
+    }
     return [...result].sort(
       (a, b) => URGENCY_RANK[a.urgency] - URGENCY_RANK[b.urgency]
     );
@@ -265,6 +295,8 @@ export function KanbanBoard({
     searchQuery,
     createdFrom,
     createdTo,
+    approvedFrom,
+    approvedTo,
     developersById,
     clientsById,
   ]);
@@ -277,7 +309,9 @@ export function KanbanBoard({
     userFilter.length > 0 ||
     searchQuery.trim() !== "" ||
     createdFrom !== "" ||
-    createdTo !== "";
+    createdTo !== "" ||
+    approvedFrom !== "" ||
+    approvedTo !== "";
 
   function handleClearFilters() {
     setStatusFilter(DEFAULT_BOARD_FILTERS.statusFilter);
@@ -288,6 +322,8 @@ export function KanbanBoard({
     setSearchQuery(DEFAULT_BOARD_FILTERS.searchQuery);
     setCreatedFrom(DEFAULT_BOARD_FILTERS.createdFrom);
     setCreatedTo(DEFAULT_BOARD_FILTERS.createdTo);
+    setApprovedFrom(DEFAULT_BOARD_FILTERS.approvedFrom);
+    setApprovedTo(DEFAULT_BOARD_FILTERS.approvedTo);
   }
 
   // Tickets live in local state seeded once from initialTickets — other
@@ -564,6 +600,27 @@ export function KanbanBoard({
               value={createdTo}
               onChange={(e) => setCreatedTo(e.target.value)}
               aria-label="Cadastrado até"
+              className="w-36"
+            />
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm text-slate-500 dark:text-slate-400">
+              Aprovado:
+            </span>
+            <Input
+              type="date"
+              value={approvedFrom}
+              onChange={(e) => setApprovedFrom(e.target.value)}
+              aria-label="Aprovado a partir de"
+              className="w-36"
+            />
+            <span className="text-sm text-slate-400 dark:text-slate-500">até</span>
+            <Input
+              type="date"
+              value={approvedTo}
+              onChange={(e) => setApprovedTo(e.target.value)}
+              aria-label="Aprovado até"
               className="w-36"
             />
           </div>

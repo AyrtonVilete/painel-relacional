@@ -1,5 +1,6 @@
 import { endOfWeek, format, startOfWeek, subWeeks } from "date-fns";
 import { URGENCY_LABELS } from "@/components/board/urgency-badge";
+import { effectiveFollowupDue } from "@/lib/followup/due";
 import type { Database } from "@/types/database.types";
 
 type TicketUrgency = Database["public"]["Enums"]["ticket_urgency"];
@@ -179,14 +180,18 @@ export function computeDashboardStats({
   }).length;
   const unassigned = tickets.filter((t) => !t.developer_id).length;
   // Recurring "cobrança de andamento" reminder from /settings/followup —
-  // distinct from "overdue" above (one-shot approval/execution targets).
-  const followupPending = tickets.filter(
-    (t) =>
-      t.next_followup_due !== null &&
-      !terminalStatusIds.has(t.status_id) &&
-      !deniedStatusIds.has(t.status_id) &&
-      new Date(t.next_followup_due) < now
-  ).length;
+  // distinct from "overdue" above (one-shot approval/execution targets), but
+  // it only exists for chamados that are already late (see
+  // effectiveFollowupDue): pending = late and the next cobrança has come due.
+  const followupDueOf = (t: DashboardTicket) =>
+    effectiveFollowupDue(t, awaitingApprovalStatusIds.has(t.status_id), today);
+  const followupPending = tickets.filter((t) => {
+    if (terminalStatusIds.has(t.status_id) || deniedStatusIds.has(t.status_id)) {
+      return false;
+    }
+    const due = followupDueOf(t);
+    return due !== null && due < now;
+  }).length;
   const denied = tickets.filter((t) => deniedStatusIds.has(t.status_id)).length;
 
   const byStatus = statuses.map((s) => ({
@@ -216,21 +221,21 @@ export function computeDashboardStats({
   // chegou a existir no banco em produção — só followup_policies, o
   // lembrete recorrente de "cobrança de andamento" configurado em
   // /settings/followup). Por isso "cumprimento de SLA" aqui mede isso: por
-  // urgência, entre os chamados em aberto com uma cobrança pendente
-  // (next_followup_due definido), quantos já estouraram o próximo lembrete
-  // vs. quantos ainda estão em dia.
+  // urgência, entre os chamados em aberto e já atrasados (só eles têm
+  // cobrança), quantos já estouraram o próximo lembrete vs. quantos foram
+  // cobrados dentro do intervalo e ainda estão em dia.
   const slaCompliance = URGENCY_ORDER.map((urgency) => {
     const relevant = tickets.filter(
       (t) =>
         t.urgency === urgency &&
-        t.next_followup_due !== null &&
+        followupDueOf(t) !== null &&
         !terminalStatusIds.has(t.status_id) &&
         !deniedStatusIds.has(t.status_id)
     );
     let cumprido = 0;
     let estourado = 0;
     for (const t of relevant) {
-      const dueDate = new Date(t.next_followup_due as string);
+      const dueDate = followupDueOf(t) as Date;
       if (now <= dueDate) {
         cumprido++;
       } else {

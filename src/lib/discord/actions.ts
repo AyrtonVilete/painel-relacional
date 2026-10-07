@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { NEXUS_ORG_ID } from "@/lib/pdvnet/constants";
+import type { Tables } from "@/types/database.types";
 
 const ticketIdSchema = z.string().uuid();
 
@@ -53,10 +54,18 @@ export async function getCobrancaOptions(): Promise<{ supervisorMention: boolean
 // — the only things trusted from the browser are the id and the free-text
 // note the person typed, so a tampered request can't make the bot post
 // arbitrary ticket data to the channel.
+//
+// One click both sends the cobrança and marks it as done on the chamado; the
+// updated chamado comes back so the board can refresh without a reload.
 export async function sendCobrancaToDiscord(
   ticketId: string,
   options?: { message?: string; mentionSupervisor?: boolean }
-): Promise<{ error?: string }> {
+): Promise<{
+  error?: string;
+  ticket?: Tables<"tickets">;
+  // Sent to Discord but couldn't be recorded on the chamado.
+  notMarked?: boolean;
+}> {
   const parsedId = ticketIdSchema.safeParse(ticketId);
   if (!parsedId.success) return { error: "Chamado inválido" };
 
@@ -213,9 +222,23 @@ export async function sendCobrancaToDiscord(
   if (failed.length === results.length) {
     return { error: "O Discord recusou a mensagem de cobrança" };
   }
-  if (failed.length > 0) {
-    return { error: `Cobrança enviada, mas falhou no ${failed.join(" e no ")} do Discord` };
-  }
+  const partialError =
+    failed.length > 0
+      ? `Cobrança enviada, mas falhou no ${failed.join(" e no ")} do Discord`
+      : undefined;
 
-  return {};
+  // At least one destination got the message, so the cobrança happened:
+  // record it on the chamado (last_followup_at = now, which the database
+  // turns into the next reminder date) — the same update the old "Marquei a
+  // cobrança" button made, so the reminder dates and the dashboard's cobrança
+  // stats move exactly as before.
+  const { data: marked, error: markError } = await supabase
+    .from("tickets")
+    .update({ last_followup_at: new Date().toISOString() })
+    .eq("id", ticket.id)
+    .select()
+    .single();
+  if (markError || !marked) return { error: partialError, notMarked: true };
+
+  return { error: partialError, ticket: marked };
 }

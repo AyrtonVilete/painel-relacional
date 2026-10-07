@@ -26,6 +26,7 @@ import {
   RequesterSelect,
 } from "@/components/board/ticket-select-fields";
 import { createClient } from "@/lib/supabase/client";
+import { formatApprovedAt } from "@/lib/tickets/approval-date";
 import { CobrancaDialog } from "@/components/board/cobranca-dialog";
 import { NEXUS_ORG_ID } from "@/lib/pdvnet/constants";
 import { parseTicketFormFields } from "@/lib/tickets/parse-ticket-form";
@@ -600,10 +601,21 @@ export function TicketDetailDialog({
 
         <div className="flex items-center justify-between gap-3">
           {ticket.approved ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
-              Aprovado
-            </span>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+                Aprovado
+              </span>
+              {/* Stamped by the database when Aprovar is clicked; read-only. */}
+              {ticket.approved_at && (
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  em {formatApprovedAt(ticket.approved_at)}
+                  {ticket.approved_by && membersById.get(ticket.approved_by)
+                    ? ` por ${membersById.get(ticket.approved_by)}`
+                    : ""}
+                </span>
+              )}
+            </div>
           ) : (
             <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
               Pendente de aprovação
@@ -647,7 +659,10 @@ export function TicketDetailDialog({
                 Negar
               </Button>
             )}
-            {ticket.next_followup_due &&
+            {/* Nexus marks the cobrança by sending it ("Gerar cobrança"); this
+                stays for organizations that have no Discord cobrança. */}
+            {ticket.organization_id !== NEXUS_ORG_ID &&
+              ticket.next_followup_due &&
               !currentStatus?.is_terminal &&
               !currentStatus?.is_denied && (
                 <Button
@@ -1036,6 +1051,7 @@ export function TicketDetailDialog({
         ticketId={ticket.id}
         ticketNumber={ticket.ticket_number}
         onClose={closeCobranca}
+        onSent={onUpdated}
       />
     )}
     </>

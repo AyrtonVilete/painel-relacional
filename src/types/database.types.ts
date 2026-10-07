@@ -960,6 +960,8 @@ export type Database = {
       tickets: {
         Row: {
           approved: boolean
+          approved_at: string | null
+          approved_by: string | null
           board_id: string
           client_id: string | null
           created_at: string
@@ -981,6 +983,8 @@ export type Database = {
         }
         Insert: {
           approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
           board_id: string
           client_id?: string | null
           created_at?: string
@@ -1002,6 +1006,8 @@ export type Database = {
         }
         Update: {
           approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
           board_id?: string
           client_id?: string | null
           created_at?: string

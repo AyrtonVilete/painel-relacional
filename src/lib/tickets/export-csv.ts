@@ -1,5 +1,6 @@
 import { URGENCY_LABELS } from "@/components/board/urgency-badge";
 import type { Tables } from "@/types/database.types";
+import { formatApprovedAt } from "@/lib/tickets/approval-date";
 
 // ";" instead of "," — a plain comma-CSV opens in Excel's pt-BR locale
 // with everything crammed into one column, since that locale already uses
@@ -46,6 +47,8 @@ export function ticketsToCsv(
     "Prazo",
     "Execução prevista",
     "Criado em",
+    "Aprovado em",
+    "Aprovado por",
   ];
 
   const rows = tickets.map((t) => [
@@ -61,6 +64,8 @@ export function ticketsToCsv(
     formatDate(t.deadline),
     formatDate(t.execution_deadline),
     formatDate(t.created_at),
+    formatApprovedAt(t.approved_at),
+    t.approved_by ? lookups.membersById.get(t.approved_by) ?? "" : "",
   ]);
 
   const lines = [headers, ...rows].map((row) =>

@@ -9,6 +9,8 @@ export type BoardFilters = {
   searchQuery: string;
   createdFrom: string;
   createdTo: string;
+  approvedFrom: string;
+  approvedTo: string;
 };
 
 export const DEFAULT_BOARD_FILTERS: BoardFilters = {
@@ -20,6 +22,8 @@ export const DEFAULT_BOARD_FILTERS: BoardFilters = {
   searchQuery: "",
   createdFrom: "",
   createdTo: "",
+  approvedFrom: "",
+  approvedTo: "",
 };
 
 // statusFilter/sprintFilter/developerFilter/clientFilter used to be a single
@@ -59,5 +63,13 @@ export function parseBoardFilters(json: unknown): BoardFilters {
       typeof raw.createdTo === "string"
         ? raw.createdTo
         : DEFAULT_BOARD_FILTERS.createdTo,
+    approvedFrom:
+      typeof raw.approvedFrom === "string"
+        ? raw.approvedFrom
+        : DEFAULT_BOARD_FILTERS.approvedFrom,
+    approvedTo:
+      typeof raw.approvedTo === "string"
+        ? raw.approvedTo
+        : DEFAULT_BOARD_FILTERS.approvedTo,
   };
 }

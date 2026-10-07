@@ -4,6 +4,7 @@ import { useDraggable } from "@dnd-kit/core";
 import { clsx } from "clsx";
 import { AlertTriangle } from "lucide-react";
 import { UrgencyBadge } from "@/components/board/urgency-badge";
+import { effectiveFollowupDue, localToday } from "@/lib/followup/due";
 import type { Tables } from "@/types/database.types";
 
 function formatDate(value: string) {
@@ -48,10 +49,8 @@ function DateBadge({ label, date }: { label: string; date: string }) {
   );
 }
 
-function formatFollowupRelative(nextFollowupDue: string) {
-  const daysDiff = Math.round(
-    (new Date(nextFollowupDue).getTime() - Date.now()) / ONE_DAY_MS
-  );
+function formatFollowupRelative(due: Date) {
+  const daysDiff = Math.round((due.getTime() - Date.now()) / ONE_DAY_MS);
   if (daysDiff < 0) {
     const overdueDays = Math.abs(daysDiff);
     return `atrasada há ${overdueDays} ${overdueDays === 1 ? "dia" : "dias"}`;
@@ -61,13 +60,12 @@ function formatFollowupRelative(nextFollowupDue: string) {
 }
 
 // Recurring check-in reminder (see /settings/followup) — distinct from the
-// Prazo/Execução prevista dates above, which are one-shot targets. Day
+// Prazo/Execução prevista dates above, which are one-shot targets. Only
+// rendered once the chamado is late (see effectiveFollowupDue). Day
 // granularity (unlike the old hour-based SLA badge this replaced) since
 // intervals here run from days to months, not hours.
-function FollowupBadge({ nextFollowupDue }: { nextFollowupDue: string }) {
-  const daysDiff = Math.round(
-    (new Date(nextFollowupDue).getTime() - Date.now()) / ONE_DAY_MS
-  );
+function FollowupBadge({ due }: { due: Date }) {
+  const daysDiff = Math.round((due.getTime() - Date.now()) / ONE_DAY_MS);
   const isOverdue = daysDiff < 0;
   const isSoon = !isOverdue && daysDiff <= 2;
 
@@ -83,7 +81,7 @@ function FollowupBadge({ nextFollowupDue }: { nextFollowupDue: string }) {
       )}
     >
       {isOverdue && <AlertTriangle className="h-3 w-3" aria-hidden />}
-      Cobrança {formatFollowupRelative(nextFollowupDue)}
+      Cobrança {formatFollowupRelative(due)}
     </p>
   );
 }
@@ -109,6 +107,11 @@ export function TicketCard({
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: ticket.id });
+
+  const followupDue =
+    isTerminal || isDenied
+      ? null
+      : effectiveFollowupDue(ticket, isAwaitingApproval, localToday());
 
   const style = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
@@ -180,9 +183,7 @@ export function TicketCard({
         <DateBadge label="Execução prevista" date={ticket.execution_deadline} />
       )}
 
-      {ticket.next_followup_due && !isTerminal && !isDenied && (
-        <FollowupBadge nextFollowupDue={ticket.next_followup_due} />
-      )}
+      {followupDue && <FollowupBadge due={followupDue} />}
     </div>
   );
 }

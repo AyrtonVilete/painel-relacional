@@ -324,24 +324,7 @@ npm run build`}</Code>
       <div className="note warn"><p><strong>Alterar a estrutura do banco não faz parte do deploy.</strong> Migração nova precisa ser rodada à mão no Supabase, antes ou logo depois do código que depende dela. O código novo foi escrito para continuar funcionando enquanto a migração não foi aplicada (a funcionalidade nova fica vazia, nada quebra).</p></div>
     </section>
 
-    <section id="pendencias">
-      <h2>Pendências conhecidas</h2>
-      <p>Situação em 07/10/2026.</p>
-      <div className="tbl"><table>
-        <thead><tr><th>Item</th><th>Situação</th></tr></thead>
-        <tbody>
-          <tr><td className="nw">Migração 0032</td><td>Impede criar organização sem aprovação, mesmo chamando o RPC direto. <strong>Ainda não aplicada.</strong></td></tr>
-          <tr><td className="nw">Migração 0033</td><td>Data e autor da aprovação. <strong>Ainda não aplicada.</strong> Até lá o filtro &quot;Aprovado&quot; fica vazio.</td></tr>
-          <tr><td className="nw">Migração 0034</td><td>Data de conclusão e conclusão automática pelo DevOps. <strong>Ainda não aplicada.</strong> Até lá o passo 4 do cron não move nada.</td></tr>
-          <tr><td className="nw">Tabelas <code>fin_*</code></td><td>Resto do app de finanças que dividia o banco. Os dados já foram removidos; falta rodar <code>supabase/maintenance/2026-10-06-remove-finance-app.sql</code>.</td></tr>
-          <tr><td className="nw">Segurança e LGPD</td><td>Cabeçalhos de segurança/CSP, restrição e correção de exportação CSV, apagar anexos junto com o chamado, página de privacidade, log de auditoria, retenção de dados e atualização do Next.js.</td></tr>
-          <tr><td className="nw">E-mail</td><td>O remetente ainda é o de teste do Resend (<code>onboarding@resend.dev</code>), que só entrega ao dono da conta. Falta verificar um domínio.</td></tr>
-          <tr><td className="nw">Login</td><td>Ligar a confirmação de e-mail no Supabase e exigir MFA para o administrador da plataforma.</td></tr>
-        </tbody>
-      </table></div>
-    </section>
-
-    <footer>Painel Relacional · documentação interna da Nexus. Esta página não contém senhas, tokens nem URLs de webhook; não os cole aqui.</footer>
-  </main>
+      <footer>Painel Relacional · documentação interna da Nexus. Esta página não contém senhas, tokens nem URLs de webhook; não os cole aqui.</footer>
+    </main>
   );
 }

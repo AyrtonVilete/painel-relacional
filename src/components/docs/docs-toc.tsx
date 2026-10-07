@@ -15,7 +15,6 @@ export const DOCS_SECTIONS = [
   { id: "regras", label: "Regras de negócio" },
   { id: "ambiente", label: "Variáveis de ambiente" },
   { id: "deploy", label: "Rodar e publicar" },
-  { id: "pendencias", label: "Pendências" },
 ];
 
 // Table of contents that highlights the section being read.
